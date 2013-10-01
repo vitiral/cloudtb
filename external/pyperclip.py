@@ -1,3 +1,4 @@
+'''
 # Pyperclip v1.3
 # A cross-platform clipboard module for Python. (only handles plain text for now)
 # By Al Sweigart al@coffeeghost.net
@@ -9,7 +10,7 @@
 
 # On Mac, this module makes use of the pbcopy and pbpaste commands, which should come with the os.
 # On Linux, this module makes use of the xclip command, which should come with the os. Otherwise run "sudo apt-get install xclip"
-
+'''
 
 # Copyright (c) 2010, Albert Sweigart
 # All rights reserved.

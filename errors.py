@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 class NeedModule(ImportError):
     def __init__(self, value):
         self.value = value
