@@ -10,10 +10,6 @@ Some Notes:
     self._profiler.strip_dirs().sort_stats('cumulative').print_stats()
     return out
 
-
-
-
-
 """
 
 from __future__ import division

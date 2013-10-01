@@ -1,9 +1,8 @@
 from __future__ import division
 
 import sys, os
-import math
+
 import inspect
-import itertools
 import traceback
 
 SHELVE_FNAME = 'calibration.pcl'
@@ -11,89 +10,14 @@ CALIBRATION_VARIABLE = 'calibration'
 CALIBRATE_VALUE = None
 
 import pdb
-import shelve
-import cProfile, profile, pstats
 
-def profile_function(name, function, *args, **kwargs):
-    '''Run like this:
-        profile_name = 'example'
-        out = prilfe_function('myfunction', profile_name , globals(), locals(), 
-                             1,2,3,4,5,6, 'first keyword' = 'first')
-        print_profile(profile_name)
-        # do stuff with out
-    '''
-    # This doesn't work! It doesn't return values
-#    return cProfile.runctx(function_str, glob, loc, name)
-    # http://stackoverflow.com/questions/1584425/return-value-while-using-cprofile
-    get_calibrate_value()    
-    prof = cProfile.Profile()
-    out = prof.runcall(function, *args, **kwargs)
-    prof.dump_stats(name)
-    return out
-
-class print_twice(object):
-    '''replaces std_out to print to both a file object and the standard
-    print location'''
-    def __init__(self, fname):
-        self.stdout = sys.stdout
-        sys.stdout = self
-        self.file = open(fname, 'w')
-    
-    def write(self, text):
-        self.stdout.write(text)
-        self.file.write(text)
-
-def print_profile(name):
-    p = pstats.Stats(name)
-    p.strip_dirs().sort_stats('cumulative').print_stats()
-
-def get_calibrate_value():
-    d =  shelve.open(SHELVE_FNAME)
-    try:
-        cal = d[CALIBRATION_VARIABLE]
-        profile.Profile.bias = cal
-        return True
-    except KeyError:
-        return False
-    finally:
-        d.close()
-
-def columnize_rows(data):
-    '''This does something similar to a Transpose, but on any set of data'''
-    return np.fliplr(np.rot90(data, k=-1))
-
-def calibrate_profiler():
-    '''The object of this exercise is to get a fairly consistent result. 
-    If your computer is very fast, or your timer function has poor resolution, 
-    you might have to pass 100000, or even 1000000, to get consistent results.
-    http://docs.python.org/2/library/profile.html
-    '''
-    pr = profile.Profile()    
-    for n in xrange(4, 6):
-        times = 10**n
-        
-        a = []
-        for i in range(5):
-            a.append(pr.calibrate(times))
-        
-        print ("Are these numbers roughly the same? "
-        "(+/- .3 order of magnitude) (y or n)")
-        for n in a:
-            print n
-            
-        an = raw_input("Answer: ")
-        if an == 'y':
-            break
-    
-    else:
-        print 'Could not calibrate profiler'
-        return
-    
-    d = shelve.open(SHELVE_FNAME)
-    try:
-        d[CALIBRATION_VARIABLE] = sum(a) / len(a)
-    finally:
-        d.close()
+def assign_to_self(self, assign_variables):
+     if 'self' in assign_variables:
+          del assign_variables['self']
+     for name, value in assign_variables.iteritems():
+          #print name, value
+          exec('self.{0} = value'.format(name))
+          #print eval('self.{0}'.format(name))
 
 def between(value, v_min, v_max):
     if v_min == None and v_max == None:
@@ -106,254 +30,6 @@ def between(value, v_min, v_max):
         return value > v_min
     
     return v_min < value < v_max
-    
-class iter2(object):
-    '''Takes in an object that is iterable.  Allows for the following method
-    calls (that should be built into iterators anyway...)
-    calls:
-        - append - appends another iterable onto the iterator.
-        - insert - only accepts inserting at the 0 place, inserts an iterable
-         before other iterables.
-        - adding.  an iter2 object can be added to another object that is
-         iterable.  i.e. iter2 + iter (not iter + iter2).  It's best to make
-         all objects iter2 objects to avoid syntax errors.  :D
-    '''
-    def __init__(self, iterable):
-        self._iter = iter(iterable)
-    
-    def append(self, iterable):
-        self._iter = itertools.chain(self._iter, iter(iterable))
-        
-    def insert(self, place, iterable):
-        if place != 0:
-            raise ValueError('Can only insert at index of 0')
-        self._iter = itertools.chain(iter(iterable), self._iter)
-    
-    def __add__(self, iterable):
-        return itertools.chain(self._iter, iter(iterable))
-        
-    def next(self):
-        return self._iter.next()
-    
-    def __iter__(self):
-        return self
-
-def flatten(iterable):
-    '''flatten a list of any depth'''
-    iterable = iter2(iterable)
-    for e in iterable:
-        if hasattr(e, '__iter__'):
-            iterable.insert(0, e)
-        else:
-            yield e
-            
-def import_path(fullpath, do_reload = False):
-    """ 
-    Import a file with full path specification. Allows one to
-    import from anywhere, something __import__ does not do. 
-    """
-    path, filename = os.path.split(fullpath)
-    filename, ext = os.path.splitext(filename)
-    sys.path.insert(0, path)
-    module = __import__(filename)
-    if do_reload:
-        reload(module)
-    del sys.path[0]
-    return module
-            
-def set_priority(pid=None,priority=1):
-    """ Set The Priority of a Windows Process.  Priority is a value between 0-5 where
-        2 is normal priority.  Default sets the priority of the current
-        python process to "below normal" but can take any valid process ID and priority. 
-        http://code.activestate.com/recipes/496767-set-process-priority-in-windows/
-        """
-        
-    import win32api,win32process,win32con
-    
-    priorityclasses = [win32process.IDLE_PRIORITY_CLASS,
-                       win32process.BELOW_NORMAL_PRIORITY_CLASS,
-                       win32process.NORMAL_PRIORITY_CLASS,
-                       win32process.ABOVE_NORMAL_PRIORITY_CLASS,
-                       win32process.HIGH_PRIORITY_CLASS,
-                       win32process.REALTIME_PRIORITY_CLASS]
-    if pid == None:
-        pid = win32api.GetCurrentProcessId()
-    handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, pid)
-    win32process.SetPriorityClass(handle, priorityclasses[priority])
-    
-    
-def find_depth(value):
-     '''returns the depth of the array
-     0 : strings, integers, floats, etc.
-     1 : vectors (1d)
-     2 : matrixies (2d)
-     etc
-     '''
-     if not hasattr(value, '__iter__'):
-          return 0, value
-          
-     if hasattr(value, 'next'): # if it is an itterator
-          firstval = value.next()     # take a peek
-          value = itertools.chain((firstval,), value)
-     else: 
-          firstval = value[0]
-
-     if hasattr(firstval, '__iter__'): # then it is a matrix!
-          return 2, value
-     else:
-          return 1, value
-          
-def get_first(value):
-     '''returns the first element wihtout upsetting an iterator
-     (must re-assign iterator to the second return value)'''
-     if not hasattr(value, '__iter__'):
-          return value, value
-          
-     if hasattr(value, 'next'): # if it is an itterator
-          firstval = value.next()     # take a peek
-          value = itertools.chain((firstval,), value)
-          return firstval, value
-     
-     firstval = value[0]
-     return firstval, value
-          
-def assign_to_self(self, assign_variables):
-     if 'self' in assign_variables:
-          del assign_variables['self']
-     for name, value in assign_variables.iteritems():
-          #print name, value
-          exec('self.{0} = value'.format(name))
-          #print eval('self.{0}'.format(name))
-          
-def replace_all(input_string, replacements):
-     '''replace the elements of the string defined in the iterable tuple.
-     ex: ((' ', ''), ('_', '')) would get rid of spaces and underscores'''
-     for before, after in replacements:
-          input_string = input_string.replace(before, after)
-     return input_string
-
-def special_figt(data_list, value, start = 0):
-    index = first_index_gt(data_list, value, start)
-    if data_list[index + 1] > value: 
-        return index + start
-    else:
-        return - 1
-
-def first_index_gt(data_list, value, start = 0):
-    '''return the first index greater than value from a given list like object'''
-    data_list = itertools.islice(data_list, start, None)
-    try:
-        index = next(data[0] for data in enumerate(data_list) if data[1] > value)
-        return index + start
-    except StopIteration: return - 1
-
-def first_index_gtet(data_list, value, start = 0):
-    '''return the first index greater than value from a given list like object'''
-    data_list = itertools.islice(data_list, start, None)
-    try:
-        index = next(data[0] for data in enumerate(data_list) if data[1] >= value)
-        return index + start
-    except StopIteration: return - 1
-
-def first_index_lt(data_list, value, start = 0):
-    '''return the first index less than value from a given list like object'''
-    data_list = itertools.islice(data_list, start, None)    
-    try:
-        index = next(data[0] for data in enumerate(data_list) if data[1] < value)
-        return index + start
-    except StopIteration: return - 1
-
-def first_index_ne(data_list, value, start = 0):
-    '''returns first index not equal to the value from list'''
-    data_list = itertools.islice(data_list, start, None)    
-    try:
-        index = next(data[0] for data in enumerate(data_list) if data[1] != value)
-        return index + start
-    except StopIteration: return - 1
-
-def first_index_et(data_list, value, start = 0):
-    '''same as data_list.index(value), except with exception handling
-    Also finds 'nan' values '''
-    data_list = itertools.islice(data_list, start, None)    
-    try:
-        if type(value) == float and math.isnan(value):
-            floats = (float, np.float64, np.float32, np.float96)
-            isnan = math.isnan
-            return next(data[0] for data in enumerate(data_list)
-              if (type(data[1]) in floats
-              and isnan(data[1])))  + start
-        else:
-            return next(data[0] for data in 
-            enumerate(data_list) if data[1] == value) + start
-    except (ValueError, StopIteration): return - 1
-
-def index_to_coords(index, shape):
-    '''convert index to coordinates given the shape'''
-    coords = []
-    for i in xrange(1, len(shape)):
-        divisor = int(np.product(shape[i:]))
-        value = index//divisor
-        coords.append(value)
-        index -= value * divisor
-    coords.append(index)
-    return tuple(coords)
-    
-def first_coords_et(data_matrix, value, start = 0):
-    '''the first coordinates that are equal to the value'''
-    index = first_index_et(data_matrix.flatten(), value, start)
-    shape = data_matrix.shape
-    return index_to_coords(index, shape)
-    
-def npfirstindex(data, value):
-    where = np.where(data == value)
-    if len(where) == 0: return - 1
-    return where[0][0]
-
-if os.name in ("nt", "dos"):
-     exefile = ".exe"
-else:
-     exefile = ""
-
-def win_run(program, *args, **kw):
-     mode = kw.get("mode", os.P_WAIT)
-     for path in os.environ["PATH"].split(os.pathsep):
-          file = os.path.join(path, program) + ".exe"
-          try:
-                return os.spawnv(mode, file, (file,) + args)
-          except os.error:
-                pass
-     raise os.error, "cannot find executable"
- 
-def spawn(program, *args):
-     try:
-          # check if the os module provides a shortcut
-          return os.spawnvp(program, (program,) + args)
-     except AttributeError:
-          pass
-     try:
-          spawnv = os.spawnv
-     except AttributeError:
-          # assume it's unix
-          pid = os.fork()
-          if not pid:
-                os.execvp(program, (program,) + args)
-          return os.wait()[0]
-     else:
-          # got spawnv but no spawnp: go look for an executable
-          for path in os.environ["PATH"].split(os.pathsep):
-                file = os.path.join(path, program) + exefile
-                try:
-                     return spawnv(os.P_WAIT, file, (file,) + args)
-                except os.error:
-                     pass
-          raise IOError, "cannot find executable"
-
-def module_path(local_function):
-    ''' returns the module path without the use of __file__.  Requires a function defined 
-    locally in the module.  This is necessary for some applications like IDLE.
-    from http://stackoverflow.com/questions/729583/getting-file-path-of-imported-module'''
-    return os.path.abspath(inspect.getsourcefile(local_function))
-
 
 def dev1():
     win_run("python", "hello.py", mode = os.P_NOWAITO)
@@ -482,6 +158,7 @@ def sort_together(data):
     Sorts only first row
     untested!
     '''
+    
     x, y = data
     ndx = np.argsort(data[0])
     data = np.dstack([n[ndx] for n in data])
@@ -528,6 +205,7 @@ def np_std_repeat(data, times):
     '''repeats an array of data several times.
     np_std_repeat([1,2,3], 2)
     >>> [[1,2,3],[1,2,3]]'''
+    
     return np.tile(data, (times, 1))
     
 import pdb

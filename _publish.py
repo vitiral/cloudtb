@@ -89,9 +89,6 @@ def convert_to_regexp(txt):
     
     print re.sub(special_or, sfun, txt)
     
-    
-
-
 def update_license(path):
     '''updates the license information for the file on the path'''
     tquotes = ("'''", '"""')
@@ -121,10 +118,6 @@ def update_license(path):
         
     
     a = 1
-    
-        
-    
-    
     
     startquotes = False
     
