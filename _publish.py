@@ -3,7 +3,9 @@
 
 The MIT License (MIT)
 
-Copyright (c) <year> <copyright holders>
+Copyright (c) 2013 Garrett Berg cloudformdesign.com
+An updated version of this file can be found at:
+https://github.com/cloudformdesign/cloudtb
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +27,6 @@ THE SOFTWARE.
 
 http://opensource.org/licenses/MIT
 
-Copyright 2013 Garrett Berg cloudformdesign.com
-
-An updated version of this file can be found at:
-#TODO: Git link
-
 *** END FILE LICENSE ***
 
 Documentation
@@ -43,59 +40,72 @@ Change the global variables below to reflect your project
 PYTHON_VERSION = 2
 '''Add your file types to list below -- comma separated'''
 FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
-FIRST_LINE = '#! /usr/bin/python{version}'
+FIRST_LINE = '#! /usr/bin/python'
 
+YOUR_LICENSE = '''
+The MIT License (MIT)
+
+Copyright (c) 2013 Garrett Berg cloudformdesign.com
+An updated version of this file can be found at:
+https://github.com/cloudformdesign/cloudtb
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+http://opensource.org/licenses/MIT
 '''
-Add anywhere in file if you don't want to change License'''
+
 KEEP_LICENSE = '*** KEEP LICENSE ***'
-
-YOUR_LICENSE = """
- Copyright 2013 Garrett Berg cloudformdesign.com
- Copyright 2009 Luca Trevisan
-
- Additional contributors: Radu Grigore
-
- LaTeX2WP version 0.6.2
-
- This file is part of LaTeX2WP, a program that converts
- a LaTeX document into a format that is ready to be
- copied and pasted into WordPress.
-
- You are free to redistribute and/or modify LaTeX2WP under the
- terms of the GNU General Public License (GPL), version 3
- or (at your option) any later version.
-
- I hope you will find LaTeX2WP useful, but be advised that
- it comes WITHOUT ANY WARRANTY; without even the implied warranty
- of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GPL for more details.
-
- You should have received a copy of the GNU General Public
- License along with LaTeX2WP.  If you can't find it,
- see <http://www.gnu.org/licenses/>.
-"""
-
 BEGIN_LICENSE = '*** BEGIN PROJECT LICENSE ***'
 END_LICENSE = '*** END PROJECT LICENSE ***'
 
-
-
 ##### CODE -- DON'T EDIT (unless you know what you are doing!) ####
+import pdb
+import dbe
 import re
-from texttools import convert_to_regexp
+import texttools
 import os
 import sys
 
 YOUR_LICENSE = YOUR_LICENSE.strip()
-FILE_TYPES_LIST = FILE_TYPES.replace(' ', '').split(',')
-reBEGIN = convert_to_regexp(BEGIN_LICENSE)
-reEND = convert_to_regexp(END_LICENSE)
+FILE_TYPES_SET = set(FILE_TYPES.replace(' ', '').split(','))
+reBEGIN = texttools.convert_to_regexp(BEGIN_LICENSE)
+reEND = texttools.convert_to_regexp(END_LICENSE)
 
 def update_license(path):
     '''updates the license information and the first line of the file
     for the file on the path'''
+    print 'updating path for: ', path
+    
+    fext = os.path.splitext(path)[1]
+    print "Extention: ", fext
+    if fext == '' :
+        pass
+    elif fext not in FILE_TYPES_SET:
+        return
+        
+    if os.path.isdir(path):
+        for f in os.listdir(path):
+            new_path = os.path.join(path, f)
+            update_license(new_path)
+        return
+        
     tquotes = ("'''", '"""')
-
     with open(path, 'r') as f:
         text = f.readlines()
 
@@ -106,6 +116,9 @@ def update_license(path):
         if KEEP_LICENSE in l:
             return 0
 
+    if not len(text):
+        text.append('')
+        
     if text[0] != FIRST_LINE:
         text.insert(0, FIRST_LINE)
 
@@ -115,9 +128,12 @@ def update_license(path):
         text.insert(1, tquotes[1])
         text.insert(1, tquotes[1])
     else:
-        # else license stays as is
+        # Else tquotes stay where they are
         remaining_text = text[:2]
-        tq = text[1]
+        tq = text[1][:3]
+        
+        #TODO: need to check they didn't do tq on same line
+        
         flic = [] # file license
         for n in xrange(2, len(text)):
             line = text[n]
@@ -152,8 +168,11 @@ def update_license(path):
 
     text.insert(2, license)
     text = '\n'.join(text)
-    with open(path, 'w') as f:
-        f.write(text)
+    uin = raw_input("About to overwrite license for <" + path + '>. Press y '
+        'if ok')
+    if uin.lower() == 'y':
+        with open(path, 'w') as f:
+            f.write(text)
 
 '''
 Publish
@@ -176,9 +195,21 @@ publish file
     - same as above but for a single file
 '''
 
+        
 if __name__ == '__main__':
-    argv = sys.argv
-    update_license('testing_publish.py')
+    import argparse
+    if len(sys.argv) < 2:
+        path = os.getcwd()
+    else:
+        parser = argparse.ArgumentParser(description = "Update License Files for "
+        "python project")
+        parser.add_argument('path', type = str, help='path to file or folder')
+        args = parser.parse_args()
+        path = args.path
+        print path
+    
+    update_license(path)
+
 
 
 

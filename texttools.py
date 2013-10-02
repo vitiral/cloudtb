@@ -1,3 +1,4 @@
+import pdb
 import re, collections
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 
@@ -11,7 +12,7 @@ def convert_to_regexp(txt):
     special_chars = r'. ^ $ * + ? { } [ ] \ | ( )'
     special = special_chars.split(' ')
     special_or = '(\\' + ')|(\\'.join(special) +')'
-    sfun = subfun(set(special), prepend = '\\')
+    sfun = subfun(match_set = set(special), prepend = '\\')
     return re.sub(special_or, sfun, txt)
 
 def check_brackets(match_list, text, line = '?'):
@@ -42,24 +43,86 @@ def check_brackets(match_list, text, line = '?'):
     return match_compile, found, gnumbers
 
 class subfun(object):
-    '''For use with re.sub. Instead of subsituting text it prepends or
-    postpends text onto it and returns it whole
-    USAGE:
+    '''General use for use with re.sub. Instead of subsituting text it prepends
+    or postpends text onto it and returns it whole. It also stores the text
+    it is replacing 
+    Input: subfun([replace, [match_set, [prepend, [postpend]]])
+        replace == text you want to replace match with
+        match_set == if None, prepends / postpends to all text. If a set
+            only replaces text that is in this match set
+        prepend == text you want to prepend -- only does so if it is in the match set
+        postpend == text you want to postpend -- only does so if it is in the match set
+    
+    stores subbed text in:
+        self.subbed
+        in the form (text, sub)
+        
         sfun = subfun(match_set, subtext, prepend, postpend)
         subbed_text = re.sub(pattern, sfun, text)
     '''
-    def __init__(self, match_set, prepend = '', postpend = ''):
-        self.ms = match_set
-        self.pre = prepend
-        self.post = postpend
-
+    def __init__(self, replace = None, prepend = '', postpend = '', 
+                 match_set = None):
+        self.replace = replace
+        self.prepend = prepend
+        self.postpend = postpend
+        self.match_set = match_set
+        self.subbed = []
+        
     def __call__(self, matchobj):
         if matchobj:
             txt = matchobj.group(0)
-            if txt in self.ms:
-                return self.pre + txt + self.post
+            start_txt = txt
+            if self.replace != None:
+                txt = self.replace
+            if self.match_set == None or txt in self.match_set:
+                txt = self.prepend + txt + self.postpend
+            self.subbed.append((start_txt, txt))
             return txt
 
+
+
+def replace_regexp(path, regexp, replace):
+    '''A powerful tool that is similar to searchmonkey or other tools...
+    but actually works for python regexp! Does user output to make sure
+    you want to actually replace everything you said you did.
+    '''
+    if os.path.isdir(path):
+        for f in os.listdir(path):
+            new_path = os.path.join(path, f)
+            replace_regexp(new_path, regexp, replace)
+        return
+    
+    with open(path) as f:
+        text = f.read()
+    
+    rcmp = re.compile(regexp)
+    if not rcmp.findall(text):
+        print "-- Could not find string on path:", path
+        return
+    
+    mysub = texttools.subfun(replace = '')
+    start_text = text
+    text = rcmp.sub(mysub, text)
+    file_msg_start = ('##### About to operate on file < {path} > with the '
+        'following Replacements:')
+    replaceheader = '\n     --- REPLACE ITEM &&&&&&&&&&&&&&&&&&& \n{orig_text}'
+    replace_mid =   '\n     --- WITH ---------------------\n{new_text}'
+    
+    print file_msg_start.format(path = path)
+    for old, new in mysub.subbed:
+        print replaceheader.format(orig_text = old),
+        print replace_mid.format(new_text = new),
+    uin = raw_input("-- IS THIS OK (Y/n):")
+    if uin.lower() == 'y':
+        print '...REPLACING',
+        with open(path, 'w') as f:
+            f.write(text)
+        print 'DONE\n'
+    else:
+        print 'not replacing file\n'
+    
+    print '################################'    
+    
 '''Some fun general text tools'''
 class SpellingCorrector(object):
     '''A very simple spelling corrector, used in GUIs to check user input.'''
