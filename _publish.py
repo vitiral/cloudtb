@@ -39,8 +39,11 @@ Change the global variables below to reflect your project
 
 PYTHON_VERSION = 2
 '''Add your file types to list below -- comma separated'''
+
 FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
+
 FIRST_LINE = '#! /usr/bin/python'
+
 
 YOUR_LICENSE = '''
 The MIT License (MIT)
@@ -94,7 +97,10 @@ def update_license(path):
     
     fext = os.path.splitext(path)[1]
     print "Extention: ", fext
-    if fext == '' :
+    fname = os.path.split(path)[1]
+    if fname[0] == '.':
+        return
+    elif fext == '' and os.path.isdir(path):
         pass
     elif fext not in FILE_TYPES_SET:
         return
@@ -168,7 +174,7 @@ def update_license(path):
 
     text.insert(2, license)
     text = '\n'.join(text)
-    uin = raw_input("About to overwrite license for <" + path + '>. Press y '
+    uin = raw_input("About to overwrite license for \n<" + path + '>\n. Press y '
         'if ok')
     if uin.lower() == 'y':
         with open(path, 'w') as f:
