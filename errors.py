@@ -6,3 +6,7 @@ class NeedModule(ImportError):
         self.value = value
     def __str__(self, value):
         return "Module Dependency not met: " + repr(self.value)
+
+
+class RequestError(Exception):
+    pass

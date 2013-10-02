@@ -20,22 +20,30 @@ except ImportError:
 
 import classtools
 
-class clouditer(object):
+class betteriter(object):
     '''Takes in an object that is iterable.  Allows for the following method
     calls (that should be built into iterators anyway...)
     calls:
         - append - appends another iterable onto the iterator.
         - insert - only accepts inserting at the 0 place, inserts an iterable
             before other iterables.
-        - adding.  an clouditer object can be added to another object that is
-            iterable.  i.e. clouditer + iter (not iter + clouditer).  It's best to make
-            all objects clouditer objects to avoid syntax errors.  :D
-        - getitem (clouditer[1:3:4] syntax) including slicing and
+        - adding.  an beteriter object can be added to another object that is
+            iterable.  i.e. beteriter + iter (not iter + beteriter).  It's best to make
+            all objects beteriter objects to avoid syntax errors.  :D
+        - getitem (beteriter[1:3:4] syntax) including slicing and
             looking up referencing
         - next - standard way to deal with iterators
 
-    Note: to use most effectively, when speed is needed make sure you pull out
-    the iter with myiter = iter(clouditer)
+    note:
+        betteriter[n] is the same as:
+        for n in betteriter:
+            pass
+        or
+        next(islice(betteriter, item))
+
+    Note: if you need to iterate directly, pull out the iter with
+        myiter = iter(beteriter)
+    this will use all c code and be super fast
     '''
     def __init__(self, iterable):
         self._iter = iter(iterable)
@@ -63,13 +71,13 @@ class clouditer(object):
     def __getitem__(self, item):
         if type(item) == int:
             if item < 0:
-                raise IndexError('Cannot address clouditer with '
+                raise IndexError('Cannot address beteriter with '
                     'negative index: ' + repr(item))
             return next(islice(self._iter, item))
 
         if type(item) == slice:
             # get the indexes, and then convert to the number
-            self._iter = itertools.islice(self._iter, item.start,
+            self._iter = islice(self._iter, item.start,
                     item.stop, item.step)
             return self._iter
 
@@ -79,84 +87,180 @@ class clouditer(object):
             raise IndexError("Could not find Index: {0}".format(value))
         return ind
 
-    def construct_past(self, past, future):
-        pass
+from errors import RequestError
 
 class soliditer(object):
     '''creates a "solid iterable" that has lookahead functionality,
     but advancing the index still deletes data.
-    Use the clouditer class if you want all iterators.
+    Use the beteriter class if you have all iterators
+    This function is intended to work with iterators as chunks,
+    it is pure python (would like to write it in c soon) so it is
+    not as fast as beteriter.
+
+    Inputs:
+        iterator, default_buf, request_extend_muliply, slicetype
+
+    iterator: the first iterator soliditer is based on. Can be extended with
+        extend
+
+    default_buf: the default buffer size kept on hand
+    request_extend_multiply: if a user makes a request for data, this extends
+        this much times as far. Default is 5
+    request_soft_limit: places a soft limit on the request for more data.
+        default is 1000
+    request_hard_limit: raises an RequestError error if the request for more
+        data goes above this value. Default is None (no limit)
+    slicetype: default type returned on slices is a tuple. For list use
+        slicetype = list. For numpy, slicetype = np.array, etc.
+
+    USAGE:
+        myiter = iter(range(1000)) # an iterator you can't peek into
+        siter = soliditer(myiter)
+        v = siter[30]   # peek in and see
+        ...             # do something with v or more with siter
+        s = siter[:30]  # take a look at whole slice (does not consume)
+        ... do some stuff
+        s.consume(30)   # dumps the data that we were looking at.
+
+    In situations where you need speed, you will want to do it in the "chunkwise" format.
+    Using next(siter) is extremely slow compared to standard iterators --
+    although obviusly if you don't care about speed you can feel free to.
+
+    If you are ever DONE with soliditer and just want access to a high speed
+    iterable, use soliditer.iterize -- doing so sets the internal variable
+    self._been_iterized = True, which will raise an assertion error if you try
+    to use soliditer again (don't, it's a bad idea!)
+
+    Note:
+    Watch out on using too many itertools.chains with hard data that you are
+    re-integrating. You can create a memory leak!
     '''
-    def __init__(self, iterable, length = None, default_len = 200,
-                request_extend_multiply = 5):
+    def __init__(self, iterable, default_buf = 200,
+                request_extend_multiply = 5, request_soft_limit = 1000,
+                request_hard_limit = None, slicetype = tuple):
+        self._been_iterized = False
         self.__next__ = self.next
-        self.__add__ = self.extend
-        data = []
-        self.append_iterable(iterable, length)
-        self._future = []
-        self.default_len = default_len
+
+        self._databuf = []
+        self._iterbuf = []
+        self.default_buf = default_buf
+        self.request_extend_multiply = request_extend_multiply
+        self.request_soft_limit = request_soft_limit
+        self.request_hard_limit = request_hard_limit
+        self.slicetype = slicetype
+        self.extend(iterable)
+
+    def buffer_size(self):
+        return len(self._databuf)
 
     def next(self):
+        assert(not self._been_iterized)
         try:
-            return data.pop(0)
+            return self._databuf.pop(0)
         except IndexError:
-            if not self.internal_extend(self.default_len):
+            self.internal_extend(self.default_buf)
+            if self.buffer_size() == 0:
                 raise StopIteration
 
     def __iter__(self):
         return self
 
-    def __len__(self):
-        return len(self.data)
+    def iterize(self):
+        '''return the high speed iterator built through
+        iterbuff and self._databuf. NOT RECOMMENDED to use soliditer
+        and the output from iterize simultaniously (they will affect
+        eachother)'''
+        self._been_iterized = True
+        return chain(self._databuf, *self._iterbuf)
 
     def extend(self, iterable):
         '''adds data onto the end'''
-        data._future.append(iterable)
+        assert(not self._been_iterized)
+        self._iterbuf.append(iter(iterable))
 
     def append(self, item):
+        assert(not self._been_iterized)
         self.extend((item,))
 
     def insert(self, index, item):
+        assert(not self._been_iterized)
         self.internal_extend(index)
-        self.data.insert(item)
+        self._databuf.insert(index, item)
 
-    def internal_extend(self, to_length):
-        '''consume one appended iter at a time
-        until at correct length.
+    def internal_extend(self, to_length, min_len = None):
+        '''consume one iter at a time until at correct length.
         return True if operation succeeds,
-        False if it fails'''
-        needed = to_length - len(self)
+        False if it fails
+        min_len is the minimum needed (not ammendable by soft limit)
+        By default all is needed (min_len = None)
+        '''
+        assert(not self._been_iterized)
+        if to_length < self.default_buf:
+            to_length = self.default_buf
+
+        hlimit = self.request_hard_limit
+        needed = to_length - self.buffer_size()
+        if (min_len != None and needed > self.request_soft_limit):
+            needed = min_len - self.buffer_size()
+
+        if hlimit != None and needed > hlimit:
+            raise RequestError("extend higher than hard limit", needed)
+
         while needed > 0:
-            it = self.future[0]
-            sliced = itertools.islice(it, 0, to_length)
-            self.data.extend(sliced)
+            if len(self._iterbuf) == 0:
+                return False
+            it = self._iterbuf[0]
+            sliced = islice(it, 0, to_length)
+            self._databuf.extend(sliced)
             done, it = isdone(it)
-            needed = to_length - len(self)
+            needed = to_length - self.buffer_size()
             if done:
-                self.future.pop(0)
+                self._iterbuf.pop(0)
             else:
                 assert(needed == 0)
+        return True
 
     def consume(self, n):
+        assert(not self._been_iterized)
         '''removes the first n variables.'''
         self.internal_extend(n)
-        del self.data[:n]
+        del self._databuf[:n]
 
     def __getitem__(self, item):
         '''
-        slices consume as if they were iterators (they are!)
-        indexes don't consume.
-        '''
+        neither slices nor indexes consume the iterator'''
+        assert(not self._been_iterized)
         if type(item) == slice:
-            return solidslice(self, slice)
+            return self.slicetype(solidslice(self, item, consume = False))
         elif type(item) == int:
-            self.internal_extend(item * self.request_extend_multiply)
-            return self.data[int]
+            self.internal_extend(item * self.request_extend_multiply,
+                min_len = item)
+            return self._databuf[item]
         else:
             raise TypeError("can only request slices or indexes")
 
+    def index(self, value, *args):
+        try:
+            return self._databuf.index(value, *args)
+        except ValueError:
+            start = self.buffer_size()
+            # extend buffer, try again.
+            self.internal_extend(self.default_buf + start)
+            if len(args) == 2:
+                return self.index(value, start, args[1])
+            else:
+                return self.index(value, start)
+
 class solidslice(object):
-    def __init__(self, soliditer, start, *args):
+    '''object for handling slicing in soliditer
+    default is for slices to act like iterator (consuming data)
+    set consume = False to change behavior'''
+    def __init__(self, soliditer, start, *args, **kwargs):
+        con = 'consume'
+        if con in kwargs:
+            self.consume = kwargs[con]
+        else:
+            self.consume = False
         self.__next__ = next
         if type(start) == slice:
             args = start
@@ -167,6 +271,7 @@ class solidslice(object):
         self.start, self.stop, self.step = myslice
         self.soliditer = soliditer
         self.__started = False
+        self.index = 0
 
     def __iter__(self):
         return self
@@ -175,11 +280,26 @@ class solidslice(object):
         start, stop, step = self.start, self.stop, self.step
         if not self.__started:
             out = self.soliditer[start]
-            self.soliditer.consume(start)
+            if self.consume:
+                self.soliditer.consume(start)
+            self.index += start
             self.__started = True
             return out
-        out = self.soliditer[step]
-        self.soliditer.consume(step)
+
+        if self.stop != None and self.index + step > self.stop:
+            raise StopIteration
+
+        getindex = step
+        if not self.consume:
+            getindex += self.index
+        try:
+            out = self.soliditer[getindex]
+        except IndexError:
+            raise StopIteration
+        finally:
+            self.index += step
+            if self.consume:
+                self.soliditer.consume(step)
         return out
 
 def isdone(iterator):
@@ -293,7 +413,7 @@ class brange(object):
 
 def flatten(iterable):
     '''flatten an iterator of any depth'''
-    iterable = clouditer(iterable)
+    iterable = beteriter(iterable)
     for e in iterable:
         if hasattr(e, '__iter__'):
             iterable.insert(0, e)
@@ -446,80 +566,77 @@ if _NUMPY_:
         >>> [[1,2,3],[1,2,3]]'''
         return np.tile(data, (times, 1))
 
-from pprint import pprint
-def print_full_isl(isl):
-    print 'FULL ISLICE_KEEP'
-    try:
-        out = []
-        for n in isl:
-            out.append(n)
-    except IndexError:
-        print "ERROR: Got index error"
-    except StopIteration:
-        print "ERROR: Got StopIteration"
-    print('OUTPUT', out)
-    print(isl.past)
-    print(isl.extra)
-
-if __name__ == '__main__':
-    import dbe
-    a = range(100)
-    b = islice_keep(a, 0, 70, 10)
-    print_full_isl(b)
-    c = islice_keep(a, 1, 10)
-    print_full_isl(c)
-    d = islice_keep(a, 1, 20, 3)
-    print_full_isl(d)
-    b = islice_keep(a, 0, None)
-    print_full_isl(b)
-    f = islice_keep(a, None, None, 3)
-    print_full_isl(f)
-
-    try:
-        islice_keep(a, 5, 2, 2)
-    except Exception as E:
-        print(E)
-    else: print('should have done something')
-
-
-    '''
-    i2 = clouditer(range(10)) + clouditer(range(30))
-    print 'Testing i2 clouditer(range(10)) + clouditer(range(30))'
+'''
+    i2 = beteriter(range(10)) + beteriter(range(30))
+    print 'Testing i2 beteriter(range(10)) + beteriter(range(30))'
     print 'next', next(i2)
 
     print 'index 10 then 2', i2[10], i2[2]
     print 'reset'
-    i2 = clouditer(range(10)) + clouditer(range(30))
+    i2 = beteriter(range(10)) + beteriter(range(30))
     print 'slice [0:5:]', [n for n in i2[0:5:]]
 
     print 'reset and adding two with same slice'
-    i2 = clouditer(range(10)) + clouditer(range(30))
-    i3 = clouditer(range(10)) + clouditer(range(30))
+    i2 = beteriter(range(10)) + beteriter(range(30))
+    i3 = beteriter(range(10)) + beteriter(range(30))
     i2, i3 = i2[0:5:], i3[0:5:]
     print [n for n in (i2 + i3)]
     '''
 
+if __name__ == '__main__':
+    import dbe
+    import pdb
 
-#    import timeit
-#    a = [1, [[[[[[[xrange(2,10)]]]]]]], [xrange(10,20),xrange(20,30),[[[[[[[[[xrange(30,40)]]]]], xrange(40,50)]]], [xrange(50,60), xrange(60,70)]]]]
-#    for _n in xrange(100):
-#        a = [[a]]
-#    print list(flatten(a))
-#    print list(flatten(a)) == range(1,70)
-#    print list(consume(a)) == range(1,70)
-#
-#    input_str = 'l=[[1, 2, 3], [4, 5, 6, 7, 8], [1, 2, 3, 4, 5, 6, 7]] * 10'
-#    input_str = 'l=' + str(a) + '\n'
-##    print timeit.Timer(
-##        '[item for sublist in l for item in sublist]',
-##        input_str
-##    ).timeit(1000)
-#    print timeit.Timer(
-#        'list(flatten(l))',
-#        input_str + str_flatten
-#    ).repeat(5, 1000)
-#
-#    print timeit.Timer(
-#        'list(consume(l))',
-#        input_str + str_consume
-#    ).repeat(5, 1000)
+    car = '>>>'
+
+    print('''
+    >>>
+    si = soliditer(iter(range(300)))
+    si.extend(range(1250, 1350))
+    si.extend(range(-200, 0))
+    si.insert(5, 'inserted')
+    si.append('appended')
+    >>>
+    ''')
+    si = soliditer(iter(range(300)))
+    si.extend(range(1250, 1350))
+    si.extend(range(-200, 0))
+    si.insert(5, 'inserted')
+    si.append('appended')
+
+    print (car, "si[10], si[5], si[105]")
+    print (si[10], si[5], si[105])
+    print(car, "list(si[0:20:3])")
+    print(list(si[0:20:3]))
+    print (car, "si[10], si[5], si[105]")
+    print (si[10], si[5], si[105])
+    print "note len data buffer:", len(si._databuf)
+    print "index of inserted", si.index('inserted')
+    print si.index('appended')
+    print 'consume a bunch of data', si.consume(500)
+    print 'print out everything'
+    print si[0:]
+    print 'and do some basic operations'
+    print "si[1], si[10], si.index('appended'), si.index(-58)"
+    print si[1], si[10], si.index('appended'), si.index(-58)
+
+    print '\n\nreseting'
+    si = soliditer(iter(range(300)))
+    si.extend(range(1250, 1350))
+    si.extend(range(-200, 0))
+    si.insert(5, 'inserted')
+    si.append('appended')
+
+    print 'iterizing'
+    it = si.iterize()
+    print 'overriding si._been_iterized for demonstration, otherwise this casues an Assertion Error'
+    si._been_iterized = False
+    print 'si[4]', si[4]
+    print 'Note how it stores only some data'
+    print 'si._databuf', si._databuf
+    print "list(it)"
+    print list(it)
+    print
+
+    print 'list(si) -- note bad idea they are not the same. Only the data was kept'
+    print (list(si))
