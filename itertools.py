@@ -6,6 +6,11 @@ Note: Imports itertools namespace so can be used instead of itertools
 '''
 from itertools import *
 import math
+import sys
+
+VERSION = sys.version_info.major
+if VERSION == 2:
+    range = xrange
 
 NUMPY = True
 try:
@@ -19,43 +24,221 @@ class iter2(object):
     calls:
         - append - appends another iterable onto the iterator.
         - insert - only accepts inserting at the 0 place, inserts an iterable
-         before other iterables.
+            before other iterables.
         - adding.  an iter2 object can be added to another object that is
-         iterable.  i.e. iter2 + iter (not iter + iter2).  It's best to make
-         all objects iter2 objects to avoid syntax errors.  :D
+            iterable.  i.e. iter2 + iter (not iter + iter2).  It's best to make
+            all objects iter2 objects to avoid syntax errors.  :D
+        - getitem (iter2[1:3:4] syntax) including slicing and
+            looking up referencing
+        - next - standard way to deal with iterators
+
+    In addition, if the variable lookahead = True (default) then using
+    the index or iter2[item] notations will not exhaust the iterator. You
+    can "look ahead" and then continue on, eventually getting to that value.
+
     '''
-    def __init__(self, iterable):
+    def __init__(self, iterable, lookahead = True):
         self._iter = iter(iterable)
+        self.lookahead = lookahead
+        self.solid_iter = None
 
     def append(self, iterable):
-        self._iter = chain(self._iter, iter(iterable))
+        self._iter = chain(self._iter, iterable)
 
     def insert(self, place, iterable):
         if place != 0:
             raise ValueError('Can only insert at index of 0')
-        self._iter = chain(iter(iterable), self._iter)
+        self._iter = chain(iterable, self._iter)
 
     def __add__(self, iterable):
-        return chain(self._iter, iter(iterable))
+        self._iter = chain(self._iter, iterable)
+        return self._iter
 
-    def next(self):
+    def __next__(self):
         return self._iter.next()
 
     def __iter__(self):
         return self
 
-def read_xrange(xrange_object):
-    '''returns the xrange object's start, stop, and step'''
-    start = xrange_object[0]
-    if len(xrange_object) > 1:
-       step = xrange_object[1] - xrange_object[0]
-    else:
-        step = 1
-    stop = xrange_object[-1] + step
-    return start, stop, step
+    def __getitem__(self, item):
+        if type(item) == int:
+            if item < 0:
+                raise IndexError('Cannot address iter2 with '
+                    'negative index: ' + repr(item))
+            if self.lookahead == False:
+                return next(islice(self._iter, item))
+            else:
+                sl = islice_keep(self._iter, item)
+                try:
+                    out = next(sl)
+                finally:
 
-class Xrange(object):
-    ''' creates an xrange-like object that supports slicing and indexing.
+                    self._iter = chain(sl.construct_past(), self._iter)
+                return out
+
+        if type(item) == slice:
+            # get the indexes, and then convert to the number
+            start, stop, step = item.start, item.stop, item.step
+            self._iter = itertools.islice(self._iter, item.start,
+                    item.stop, item.step)
+            return self._iter
+
+    def index(self, value, start = 0, stop = None):
+        ind = first_index_et(self._iter, value)
+        if ind == -1:
+            raise IndexError("Could not find Index: {0}".format(value))
+        return ind
+
+    def construct_past(self, past, future):
+        pass
+
+class solid_iter(object):
+    '''creates a "solid iterable" that has lookahead functionality,
+    but advancing the index still deletes data
+    Made for the iter2 class -- use that.
+    careful! data is in reverse order so that I can use pop as next (speeds things up)
+
+    Ok, I think I may have screwed up a bit...
+    what should happen is this should support slices, but have a "reserve" iter
+    that it can always tap into and extend itself every step of the way.
+
+    In fact... this should just replace iter2. Iter2 can be used as only for
+    adding iterables. It's a bad idea to introduce (histories) solids into that mix. Just
+    keep it with chain tools
+
+    I can use what i learned with islice though.
+
+    '''
+    def __init__(self, iterable, length = None):
+        data = []
+        self.append_iterable(iterable, length)
+        self.next = data.pop
+        self.__next__ = data.pop
+
+    def __len__(self):
+        return len(self.data)
+
+    def extend(self, iterable, len = None):
+        '''adds data onto the end'''
+        if type(iterable) == list:
+            if length != None:
+                data = iterable[:length]
+            else:
+                data = iterable
+        else:
+            iterable = iter(iterable)
+            if length == None:
+                data = list(it)
+            if length != None:
+                data = [next(iterable) for n in range(length)]
+        self.data.reverse()
+        self.data.extend(data)
+        self.data.reverse()
+
+    def __getitem__(self, item):
+        '''just passes it onto the data. reversing index though'''
+        return self.data.__getitem__(len(data) - item)
+
+    def __iter__(self):
+        return self
+
+class islice_keep(object):
+    '''
+    islice_keep(iterable, start, [stop[, step]])
+    just like islice, but returns both the iterator and stores every element
+    iterated into islice_keep.past
+    if it encounters a StopIteration from the iterator, then the excess (before hand) is stored in
+    islice_keep.extra and not appended to islice_keep.past
+    islice_keep.past is an array of tupples -- each containing the history
+    of one step. To regain the data use either itertools.chain(*islice_keep.past)
+    or #TODO: I actually don't know a list concatenation tool...
+    '''
+    def __init__(self, iterable, *args):
+        if len(args) == 0:
+            raise TypeError("islice_keep takes at least 2 arguments")
+        elif len(args) == 1:
+            start, stop, step = None, args[0], None
+        elif len(args) == 2:
+            start, stop = args
+            step = None
+        elif len(args) == 3:
+            start, stop, step = args
+        else:
+            raise TypeError("islice_keep takes at max 4 arguments")
+
+        if start == None and stop == None and step == None:
+            raise ValueError
+
+        start = 0 if start == None else start
+        step = 1 if step == None else step
+
+        if start < 0 or (stop < 0 and stop != None) or step < 0:
+            raise IndexError("No negative indexes: " + repr([start, stop, step]))
+
+        if stop != None:
+            if start >= stop:
+                raise IndexError("start greater than or equal to stop")
+            if step >= stop - start:
+                raise IndexError("step larger than stop - start")
+
+        print "created:", start, stop, step
+        self._iter = iter(iterable)
+        self.start, self.stop, self.step = start, stop, step
+        self.past = []
+        self.extra = None
+        self._index = 0
+        self.__started = False
+
+    def construct_past(self):
+        '''returns the current iterator of the past,
+        including extra'''
+        if self.extra:
+            return chain(chain(*self.past), self.extra)
+        else:
+            return chain(*self.past)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        start, stop, step = self.start, self.stop, self.step
+        if not self.__started:
+            out = self._advance(start+1)
+            self.__started = True
+            return out
+        return self._advance(step)
+
+    def next(self):
+        return self.__next__()
+
+    def _advance(self, amount):
+        assert(amount > 0)
+        self._index += amount
+        if self.stop != None and self._index > self.stop:
+            raise StopIteration
+
+        prev = tuple((next(self._iter) for n in range(amount)))
+        if len(prev) == 0 or len(prev) < amount:
+            self.extra = prev
+            raise IndexError("Call exceeded end of iterator. "
+                "Result stored in islice.extra")
+        self.past.append(prev)
+        return prev[-1]
+
+if VERSION == 3:
+    def read_xrange(xrange_object):
+        '''returns the xrange object's start, stop, and step'''
+        start = xrange_object[0]
+        if len(xrange_object) > 1:
+           step = xrange_object[1] - xrange_object[0]
+        else:
+            step = 1
+        stop = xrange_object[-1] + step
+        return start, stop, step
+
+class brange(object):
+    ''' "better range"
+    creates an xrange-like object that supports slicing and indexing.
     ex: a = Xrange(20)
     a.index(10)
     will work
@@ -66,13 +249,16 @@ class Xrange(object):
     Also allows for the conversion from an existing xrange object.
 
     Note: Designed to work VERY fast.
+    Note: outdated in python3, range does these things.
     '''
     def __init__(self, *inputs):
+        if VERSION == 3:
+            return range(*inputs)
         # allow inputs of xrange objects
         if len(inputs) == 1:
             test, = inputs
             if type(test) == xrange:
-                self.xrange = test
+                self.range = test
                 self.start, self.stop, self.step = read_xrange(test)
                 return
 
@@ -87,17 +273,20 @@ class Xrange(object):
         else:
             raise ValueError(inputs)
 
-        self.xrange = xrange(self.start, self.stop, self.step)
+        self.range = range(self.start, self.stop, self.step)
 
     def __iter__(self):
-        return iter(self.xrange)
+        return iter(self.range)
+
+    def __len__(self):
+        return len(self.range)
 
     def __getitem__(self, item):
         if type(item) is int:
             if item < 0:
                 item += len(self)
 
-            return self.xrange[item]
+            return self.range[item]
 
         if type(item) is slice:
             # get the indexes, and then convert to the number
@@ -108,7 +297,7 @@ class Xrange(object):
             start = self[start]
             if start < 0: raise IndexError(item)
             step = (self.step if self.step != None else 1) * (step if step != None else 1)
-            stop = stop if stop is not None else self.xrange[-1]
+            stop = stop if stop is not None else self.range[-1]
             if stop < 0:
                 stop += stop
 
@@ -129,13 +318,10 @@ class Xrange(object):
         index = int(index)
 
         try:
-            self.xrange[index]
+            self.range[index]
         except (IndexError, TypeError):
             raise error
         return index
-
-    def __len__(self):
-        return len(self.xrange)
 
 def flatten(iterable):
     '''flatten an iterator of any depth'''
@@ -145,7 +331,6 @@ def flatten(iterable):
             iterable.insert(0, e)
         else:
             yield e
-
 
 def find_depth(value):
     '''
@@ -258,7 +443,7 @@ if _NUMPY_:
     def np_index_to_coords(index, shape):
         '''convert index to coordinates given the shape'''
         coords = []
-        for i in xrange(1, len(shape)):
+        for i in range(1, len(shape)):
             divisor = int(np.product(shape[i:]))
             value = index//divisor
             coords.append(value)
@@ -293,38 +478,58 @@ if _NUMPY_:
         >>> [[1,2,3],[1,2,3]]'''
         return np.tile(data, (times, 1))
 
+from pprint import pprint
+def print_full_isl(isl):
+    print 'FULL ISLICE_KEEP'
+    try:
+        out = []
+        for n in isl:
+            out.append(n)
+    except IndexError:
+        print "ERROR: Got index error"
+    except StopIteration:
+        print "ERROR: Got StopIteration"
+    print('OUTPUT', out)
+    print(isl.past)
+    print(isl.extra)
+
 if __name__ == '__main__':
-    ab = np.arange(0, 30000)
-    ab.shape = (20, 20, 30000/(20*20))
-    value = ab[7][12][0]
-    print first_coords_et(ab, value)
+    import dbe
+    a = range(100)
+    b = islice_keep(a, 0, 70, 10)
+    print_full_isl(b)
+    c = islice_keep(a, 1, 10)
+    print_full_isl(c)
+    d = islice_keep(a, 1, 20, 3)
+    print_full_isl(d)
+    b = islice_keep(a, 0, None)
+    print_full_isl(b)
+    f = islice_keep(a, None, None, 3)
+    print_full_isl(f)
 
-    import unittest
-    import random
-    class XrangeTest(unittest.TestCase):
-        def test_basic(self):
-            for _n in xrange(1000):
-                stop = int(random.uniform(500, 2000))
-                div = int(random.uniform(40, 200))
-                start = int(stop/div)
-                step = int(random.uniform(1, 5))
-
-                ray = range(start, stop, step)
-                xray = Xrange(start, stop, step)
-                self.assertEqual(len(ray), len(xray.xrange))
+    try:
+        islice_keep(a, 5, 2, 2)
+    except Exception as E:
+        print(E)
+    else: print('should have done something')
 
 
-                self.assert_all_equal(ray[2:20:4], xray[2:20:4])
-                self.assert_all_equal(ray[10:30], xray[10:30])
+    '''
+    i2 = iter2(range(10)) + iter2(range(30))
+    print 'Testing i2 iter2(range(10)) + iter2(range(30))'
+    print 'next', next(i2)
 
-        def assert_all_equal(self, ray1, ray2):
-            self.assertEqual(len(ray1), len(ray2))
-            [self.assertEqual(ray1[n], ray2[n]) for n in xrange(len(ray1))]
+    print 'index 10 then 2', i2[10], i2[2]
+    print 'reset'
+    i2 = iter2(range(10)) + iter2(range(30))
+    print 'slice [0:5:]', [n for n in i2[0:5:]]
 
-    x = xrange(5, 21, 3)
-    xx = Xrange(x)
-    x5 = xx[:5]
-    print list(x5)
+    print 'reset and adding two with same slice'
+    i2 = iter2(range(10)) + iter2(range(30))
+    i3 = iter2(range(10)) + iter2(range(30))
+    i2, i3 = i2[0:5:], i3[0:5:]
+    print [n for n in (i2 + i3)]
+    '''
 
 
 #    import timeit

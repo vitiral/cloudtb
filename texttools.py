@@ -1,4 +1,3 @@
-
 import re, collections
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 

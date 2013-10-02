@@ -1,10 +1,10 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 '''
-  Any importing module will go to pdb on exception rather than going to nothing.  Title stands for
-  DeBug on Exception, naming convention similar to pdb (python debugger)
+  This modules makes it so that any importing module will go to pdb on exception
+  rather than going to nothing.  Title stands for
+  "DeBug on Exception:, naming convention similar to pdb (python debugger)
 
-  Thanks to: Lennart Regebro at http://stackoverflow.com/questions/5515940/trying-to-implement-import-debug-mode-module/5517696#5517696
+  Thanks to: Lennart Regebro at
+ <http://stackoverflow.com/questions/5515940/trying-to-implement-import-debug-mode-module/5517696#5517696>
 '''
 
 import sys

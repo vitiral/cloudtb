@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 27 13:07:58 2012
-
-@author: Berg_Garrett
-"""
 from __future__ import division
 
 def assign_to_self(self, assign_variables):
