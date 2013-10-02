@@ -18,26 +18,26 @@ try:
 except ImportError:
     _NUMPY_ = False
 
-class iter2(object):
+import classtools
+
+class clouditer(object):
     '''Takes in an object that is iterable.  Allows for the following method
     calls (that should be built into iterators anyway...)
     calls:
         - append - appends another iterable onto the iterator.
         - insert - only accepts inserting at the 0 place, inserts an iterable
             before other iterables.
-        - adding.  an iter2 object can be added to another object that is
-            iterable.  i.e. iter2 + iter (not iter + iter2).  It's best to make
-            all objects iter2 objects to avoid syntax errors.  :D
-        - getitem (iter2[1:3:4] syntax) including slicing and
+        - adding.  an clouditer object can be added to another object that is
+            iterable.  i.e. clouditer + iter (not iter + clouditer).  It's best to make
+            all objects clouditer objects to avoid syntax errors.  :D
+        - getitem (clouditer[1:3:4] syntax) including slicing and
             looking up referencing
         - next - standard way to deal with iterators
 
-    In addition, if the variable lookahead = True (default) then using
-    the index or iter2[item] notations will not exhaust the iterator. You
-    can "look ahead" and then continue on, eventually getting to that value.
-
+    Note: to use most effectively, when speed is needed make sure you pull out
+    the iter with myiter = iter(clouditer)
     '''
-    def __init__(self, iterable, lookahead = True):
+    def __init__(self, iterable):
         self._iter = iter(iterable)
         self.lookahead = lookahead
         self.solid_iter = None
@@ -55,30 +55,20 @@ class iter2(object):
         return self._iter
 
     def __next__(self):
-        return self._iter.next()
+        return next(self._iter)
 
     def __iter__(self):
-        return self
+        return self._iter
 
     def __getitem__(self, item):
         if type(item) == int:
             if item < 0:
-                raise IndexError('Cannot address iter2 with '
+                raise IndexError('Cannot address clouditer with '
                     'negative index: ' + repr(item))
-            if self.lookahead == False:
-                return next(islice(self._iter, item))
-            else:
-                sl = islice_keep(self._iter, item)
-                try:
-                    out = next(sl)
-                finally:
-
-                    self._iter = chain(sl.construct_past(), self._iter)
-                return out
+            return next(islice(self._iter, item))
 
         if type(item) == slice:
             # get the indexes, and then convert to the number
-            start, stop, step = item.start, item.stop, item.step
             self._iter = itertools.islice(self._iter, item.start,
                     item.stop, item.step)
             return self._iter
@@ -92,41 +82,18 @@ class iter2(object):
     def construct_past(self, past, future):
         pass
 
-def isdone(iterator):
-    '''tells you whether the iterator is out if items without harming it.
-    returns the new rebuilt iterable
-    returns isdone, iterator'''
-    try:
-        value = next(iterator)
-    except StopIteration:
-        return True, iterator
-    return False, chain((value,), iterator)
-
-
 class soliditer(object):
     '''creates a "solid iterable" that has lookahead functionality,
-    but advancing the index still deletes data
-    Made for the iter2 class -- use that.
-    careful! data is in reverse order so that I can use pop as next (speeds things up)
-
-    Ok, I think I may have screwed up a bit...
-    what should happen is this should support slices, but have a "reserve" iter
-    that it can always tap into and extend itself every step of the way.
-
-    In fact... this should just replace iter2. Iter2 can be used as only for
-    adding iterables. It's a bad idea to introduce (histories) solids into that mix. Just
-    keep it with chain tools
-
-    islice is still necessary though, but I need to pass solid_iter ITSELF as
-    the iterator. That's where I screwed up.
+    but advancing the index still deletes data.
+    Use the clouditer class if you want all iterators.
     '''
     def __init__(self, iterable, length = None, default_len = 200,
                 request_extend_multiply = 5):
+        self.__next__ = self.next
+        self.__add__ = self.extend
         data = []
         self.append_iterable(iterable, length)
-        self.__next__ = self.next
         self._future = []
-        self.__next__ = self.next
         self.default_len = default_len
 
     def next(self):
@@ -136,12 +103,22 @@ class soliditer(object):
             if not self.internal_extend(self.default_len):
                 raise StopIteration
 
+    def __iter__(self):
+        return self
+
     def __len__(self):
         return len(self.data)
 
     def extend(self, iterable):
         '''adds data onto the end'''
         data._future.append(iterable)
+
+    def append(self, item):
+        self.extend((item,))
+
+    def insert(self, index, item):
+        self.internal_extend(index)
+        self.data.insert(item)
 
     def internal_extend(self, to_length):
         '''consume one appended iter at a time
@@ -178,9 +155,6 @@ class soliditer(object):
         else:
             raise TypeError("can only request slices or indexes")
 
-    def __iter__(self):
-        return self
-
 class solidslice(object):
     def __init__(self, soliditer, start, *args):
         self.__next__ = next
@@ -208,64 +182,15 @@ class solidslice(object):
         self.soliditer.consume(step)
         return out
 
-import classtools
-class islice_keep(object):
-    '''
-    islice_keep(iterable, start, [stop[, step]])
-    just like islice, but returns both the iterator and stores every element
-    iterated into islice_keep.past
-    if it encounters a StopIteration from the iterator, then the excess (before hand) is stored in
-    islice_keep.extra and not appended to islice_keep.past
-    islice_keep.past is an array of tupples -- each containing the history
-    of one step. To regain the data use either itertools.chain(*islice_keep.past)
-    or #TODO: I actually don't know a list concatenation tool...
-    '''
-    def __init__(self, iterable, *args):
-        start, stop, step = classtools.slice_synatx(args)
-        classtools.iterable_slice_error_check(start, stop, step)
-
-        self._iter = iter(iterable)
-        self.start, self.stop, self.step = start, stop, step
-        self.past = []
-        self.extra = None
-        self._index = 0
-        self.__started = False
-
-    def construct_past(self):
-        '''returns the current iterator of the past,
-        including extra'''
-        if self.extra:
-            return chain(chain(*self.past), self.extra)
-        else:
-            return chain(*self.past)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        start, stop, step = self.start, self.stop, self.step
-        if not self.__started:
-            out = self._advance(start+1)
-            self.__started = True
-            return out
-        return self._advance(step)
-
-    def next(self):
-        return self.__next__()
-
-    def _advance(self, amount):
-        assert(amount > 0)
-        self._index += amount
-        if self.stop != None and self._index > self.stop:
-            raise StopIteration
-
-        prev = tuple((next(self._iter) for n in range(amount)))
-        if len(prev) == 0 or len(prev) < amount:
-            self.extra = prev
-            raise IndexError("Call exceeded end of iterator. "
-                "Result stored in islice.extra")
-        self.past.append(prev)
-        return prev[-1]
+def isdone(iterator):
+    '''tells you whether the iterator is out if items without harming it.
+    returns the new rebuilt iterable
+    returns isdone, iterator'''
+    try:
+        value = next(iterator)
+    except StopIteration:
+        return True, iterator
+    return False, chain((value,), iterator)
 
 if VERSION == 3:
     def read_xrange(xrange_object):
@@ -291,7 +216,8 @@ class brange(object):
     Also allows for the conversion from an existing xrange object.
 
     Note: Designed to work VERY fast.
-    Note: outdated in python3, range does these things.
+    Note: outdated in python3, range does these things. Automatically
+    just returns a range
     '''
     def __init__(self, *inputs):
         if VERSION == 3:
@@ -367,7 +293,7 @@ class brange(object):
 
 def flatten(iterable):
     '''flatten an iterator of any depth'''
-    iterable = iter2(iterable)
+    iterable = clouditer(iterable)
     for e in iterable:
         if hasattr(e, '__iter__'):
             iterable.insert(0, e)
@@ -557,18 +483,18 @@ if __name__ == '__main__':
 
 
     '''
-    i2 = iter2(range(10)) + iter2(range(30))
-    print 'Testing i2 iter2(range(10)) + iter2(range(30))'
+    i2 = clouditer(range(10)) + clouditer(range(30))
+    print 'Testing i2 clouditer(range(10)) + clouditer(range(30))'
     print 'next', next(i2)
 
     print 'index 10 then 2', i2[10], i2[2]
     print 'reset'
-    i2 = iter2(range(10)) + iter2(range(30))
+    i2 = clouditer(range(10)) + clouditer(range(30))
     print 'slice [0:5:]', [n for n in i2[0:5:]]
 
     print 'reset and adding two with same slice'
-    i2 = iter2(range(10)) + iter2(range(30))
-    i3 = iter2(range(10)) + iter2(range(30))
+    i2 = clouditer(range(10)) + clouditer(range(30))
+    i3 = clouditer(range(10)) + clouditer(range(30))
     i2, i3 = i2[0:5:], i3[0:5:]
     print [n for n in (i2 + i3)]
     '''
