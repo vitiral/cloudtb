@@ -7,7 +7,8 @@
   Thanks to: Lennart Regebro at http://stackoverflow.com/questions/5515940/trying-to-implement-import-debug-mode-module/5517696#5517696
 '''
 
-import sys, pdb
+import sys
+import pdb
 
 def except_hook(exctype, value, traceback):
     if previous_except_hook:

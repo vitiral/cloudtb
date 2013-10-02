@@ -1,9 +1,9 @@
 '''Functions that are useful for interfacing with spreadsheet syntax
 '''
 
-class excel_index_counter(object):
-    '''can keep track of incrementing an excel notated number.
-    can also be used to increment pre-existing excel notation'''
+class spreadsheet_index_counter(object):
+    '''can keep track of incrementing an spreadsheet notated number.
+    can also be used to increment pre-existing spreadsheet notation'''
     def __init__(self, letters = None, count = 0 ):
         self.count = count
         if letters == None:
@@ -25,7 +25,7 @@ class excel_index_counter(object):
         else:
             self.letters[position] += 1
 
-    def get_excel_counter(self):
+    def get_spreadsheet_counter(self):
         return ''.join([chr(ord('A') + n) for n in self.letters])
 
     def get_count(self):
@@ -42,14 +42,14 @@ def stdindex_to_strindex(stdindex):
         col = col2
         num_list.insert(0, (col-1) % 26 )
         col2 = (col - 1) // 26
-    ec = excel_index_counter()
+    ec = spreadsheet_index_counter()
     ec.letters = num_list
 
     if num_list == []:
         return 'A', row
     else:
         ec.increment()
-        return ec.get_excel_counter(), row
+        return ec.get_spreadsheet_counter(), row
 
 def strindex_to_tuples(strindex):
         '''conviencience function for converting from a string index
@@ -79,10 +79,10 @@ def strindex_to_stdindex(strindex):
     return row, col
 
 def dev1():
-    e = excel_index_counter()
+    e = spreadsheet_index_counter()
     num = int(1000)
     for n in xrange(num, num+100000):
-        e_count = e.get_excel_counter()
+        e_count = e.get_spreadsheet_counter()
         a = strindex_to_stdindex(e_count + '0')[1]
         if a != e.count:
             print 'ERROR1: ', e.count, e_count, a

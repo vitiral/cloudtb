@@ -1,16 +1,17 @@
 '''
-Extends on top of itertools additional functionality.
-Note: Imports itertools namespace so can be used instead of itertools
+Extends on top of itertools additional functionality for lists, iterators,
+and numpy arrays.
 
+Note: Imports itertools namespace so can be used instead of itertools
 '''
 from itertools import *
 import math
 
 NUMPY = True
 try:
-    import numpy as np
+    import _NUMPY_ as np
 except ImportError:
-    NUMPY = False
+    _NUMPY_ = False
 
 class iter2(object):
     '''Takes in an object that is iterable.  Allows for the following method
@@ -238,7 +239,7 @@ def first_index_et(data_list, value, start = 0):
     try:
         if type(value) == float and math.isnan(value):
             floats = set(float,)
-            if NUMPY:
+            if _NUMPY_:
                 floats.update((np.float64, np.float32, np.float96))
             isnan = math.isnan
             return next(data[0] for data in enumerate(data_list)
@@ -253,43 +254,44 @@ def first_index_et(data_list, value, start = 0):
 '''Numpy only functions
 These functions can only be used with numpy
 '''
-def np_index_to_coords(index, shape):
-    '''convert index to coordinates given the shape'''
-    coords = []
-    for i in xrange(1, len(shape)):
-        divisor = int(np.product(shape[i:]))
-        value = index//divisor
-        coords.append(value)
-        index -= value * divisor
-    coords.append(index)
-    return tuple(coords)
+if _NUMPY_:
+    def np_index_to_coords(index, shape):
+        '''convert index to coordinates given the shape'''
+        coords = []
+        for i in xrange(1, len(shape)):
+            divisor = int(np.product(shape[i:]))
+            value = index//divisor
+            coords.append(value)
+            index -= value * divisor
+        coords.append(index)
+        return tuple(coords)
 
-def np_first_coords_et(data_matrix, value, start = 0):
-    '''the first coordinates that are equal to the value'''
-    index = first_index_et(data_matrix.flatten(), value, start)
-    shape = data_matrix.shape
-    return np_index_to_coords(index, shape)
+    def np_first_coords_et(data_matrix, value, start = 0):
+        '''the first coordinates that are equal to the value'''
+        index = first_index_et(data_matrix.flatten(), value, start)
+        shape = data_matrix.shape
+        return np_index_to_coords(index, shape)
 
-def np_sort_together(data):
-    '''sorts a multi row array by keeping the rows together.
-    Sorts only first row
-    untested!
-    '''
-    x, y = data
-    ndx = np.argsort(data[0])
-    data = np.dstack([n[ndx] for n in data])
-    data = np.transpose(data)
-    return data
+    def np_sort_together(data):
+        '''sorts a multi row array by keeping the rows together.
+        Sorts only first row
+        untested!
+        '''
+        x, y = data
+        ndx = np.argsort(data[0])
+        data = np.dstack([n[ndx] for n in data])
+        data = np.transpose(data)
+        return data
 
-def np_columnize_rows(data):
-    '''This does something similar to a Transpose, but on any set of data'''
-    return np.fliplr(np.rot90(data, k=-1))
+    def np_columnize_rows(data):
+        '''This does something similar to a Transpose, but on any set of data'''
+        return np.fliplr(np.rot90(data, k=-1))
 
-def np_std_repeat(data, times):
-    '''repeats an array of data several times.
-    np_std_repeat([1,2,3], 2)
-    >>> [[1,2,3],[1,2,3]]'''
-    return np.tile(data, (times, 1))
+    def np_std_repeat(data, times):
+        '''repeats an array of data several times.
+        np_std_repeat([1,2,3], 2)
+        >>> [[1,2,3],[1,2,3]]'''
+        return np.tile(data, (times, 1))
 
 if __name__ == '__main__':
     ab = np.arange(0, 30000)

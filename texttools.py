@@ -104,5 +104,3 @@ class SpellingCorrector(object):
                       self.known_edits2(word) or
                       [word])
         return max(candidates, key=self.NWORDS.get)
-
-
