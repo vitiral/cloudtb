@@ -92,7 +92,18 @@ class iter2(object):
     def construct_past(self, past, future):
         pass
 
-class solid_iter(object):
+def isdone(iterator):
+    '''tells you whether the iterator is out if items without harming it.
+    returns the new rebuilt iterable
+    returns isdone, iterator'''
+    try:
+        value = next(iterator)
+    except StopIteration:
+        return True, iterator
+    return False, chain((value,), iterator)
+
+
+class soliditer(object):
     '''creates a "solid iterable" that has lookahead functionality,
     but advancing the index still deletes data
     Made for the iter2 class -- use that.
@@ -106,42 +117,98 @@ class solid_iter(object):
     adding iterables. It's a bad idea to introduce (histories) solids into that mix. Just
     keep it with chain tools
 
-    I can use what i learned with islice though.
-
+    islice is still necessary though, but I need to pass solid_iter ITSELF as
+    the iterator. That's where I screwed up.
     '''
-    def __init__(self, iterable, length = None):
+    def __init__(self, iterable, length = None, default_len = 200,
+                request_extend_multiply = 5):
         data = []
         self.append_iterable(iterable, length)
-        self.next = data.pop
-        self.__next__ = data.pop
+        self.__next__ = self.next
+        self._future = []
+        self.__next__ = self.next
+        self.default_len = default_len
+
+    def next(self):
+        try:
+            return data.pop(0)
+        except IndexError:
+            if not self.internal_extend(self.default_len):
+                raise StopIteration
 
     def __len__(self):
         return len(self.data)
 
-    def extend(self, iterable, len = None):
+    def extend(self, iterable):
         '''adds data onto the end'''
-        if type(iterable) == list:
-            if length != None:
-                data = iterable[:length]
+        data._future.append(iterable)
+
+    def internal_extend(self, to_length):
+        '''consume one appended iter at a time
+        until at correct length.
+        return True if operation succeeds,
+        False if it fails'''
+        needed = to_length - len(self)
+        while needed > 0:
+            it = self.future[0]
+            sliced = itertools.islice(it, 0, to_length)
+            self.data.extend(sliced)
+            done, it = isdone(it)
+            needed = to_length - len(self)
+            if done:
+                self.future.pop(0)
             else:
-                data = iterable
-        else:
-            iterable = iter(iterable)
-            if length == None:
-                data = list(it)
-            if length != None:
-                data = [next(iterable) for n in range(length)]
-        self.data.reverse()
-        self.data.extend(data)
-        self.data.reverse()
+                assert(needed == 0)
+
+    def consume(self, n):
+        '''removes the first n variables.'''
+        self.internal_extend(n)
+        del self.data[:n]
 
     def __getitem__(self, item):
-        '''just passes it onto the data. reversing index though'''
-        return self.data.__getitem__(len(data) - item)
+        '''
+        slices consume as if they were iterators (they are!)
+        indexes don't consume.
+        '''
+        if type(item) == slice:
+            return solidslice(self, slice)
+        elif type(item) == int:
+            self.internal_extend(item * self.request_extend_multiply)
+            return self.data[int]
+        else:
+            raise TypeError("can only request slices or indexes")
 
     def __iter__(self):
         return self
 
+class solidslice(object):
+    def __init__(self, soliditer, start, *args):
+        self.__next__ = next
+        if type(start) == slice:
+            args = start
+        else:
+            args = (start,) + args
+        myslice = classtools.slice_synatx(args)
+        classtools.iterable_slice_error_check(*myslice)
+        self.start, self.stop, self.step = myslice
+        self.soliditer = soliditer
+        self.__started = False
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        start, stop, step = self.start, self.stop, self.step
+        if not self.__started:
+            out = self.soliditer[start]
+            self.soliditer.consume(start)
+            self.__started = True
+            return out
+        out = self.soliditer[step]
+        self.soliditer.consume(step)
+        return out
+
+import classtools
 class islice_keep(object):
     '''
     islice_keep(iterable, start, [stop[, step]])
@@ -154,34 +221,9 @@ class islice_keep(object):
     or #TODO: I actually don't know a list concatenation tool...
     '''
     def __init__(self, iterable, *args):
-        if len(args) == 0:
-            raise TypeError("islice_keep takes at least 2 arguments")
-        elif len(args) == 1:
-            start, stop, step = None, args[0], None
-        elif len(args) == 2:
-            start, stop = args
-            step = None
-        elif len(args) == 3:
-            start, stop, step = args
-        else:
-            raise TypeError("islice_keep takes at max 4 arguments")
+        start, stop, step = classtools.slice_synatx(args)
+        classtools.iterable_slice_error_check(start, stop, step)
 
-        if start == None and stop == None and step == None:
-            raise ValueError
-
-        start = 0 if start == None else start
-        step = 1 if step == None else step
-
-        if start < 0 or (stop < 0 and stop != None) or step < 0:
-            raise IndexError("No negative indexes: " + repr([start, stop, step]))
-
-        if stop != None:
-            if start >= stop:
-                raise IndexError("start greater than or equal to stop")
-            if step >= stop - start:
-                raise IndexError("step larger than stop - start")
-
-        print "created:", start, stop, step
         self._iter = iter(iterable)
         self.start, self.stop, self.step = start, stop, step
         self.past = []
