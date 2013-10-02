@@ -12,7 +12,7 @@ global IS_SETUP, MAX_SIZE, USE_DBE
 
 IS_SETUP = False
 MAX_SIZE = 10e6 # maximum size of std log file = 10MB
-USE_DBE = True    # will use dbe when level == loggging.DEBUG.  If set to false, it will not.
+USE_DBE = False    # will use dbe when level == loggging.DEBUG.  If set to false, it will not.
 
 def setuplogger(filename = 'python.log', directory = None, format =
                 '%(levelname)s:%(name)s.%(funcName)s:%(message)s', level = logging.INFO, ignoresize = False, dbeDisabled = False):

@@ -41,7 +41,13 @@ Change the global variables below to reflect your project
 '''
 
 PYTHON_VERSION = 2
+'''Add your file types to list below -- comma separated'''
+FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
 FIRST_LINE = '#! /usr/bin/python{version}'
+
+'''
+Add anywhere in file if you don't want to change License'''
+KEEP_LICENSE = '*** KEEP LICENSE ***'
 
 YOUR_LICENSE = """
  Copyright 2013 Garrett Berg cloudformdesign.com
@@ -69,72 +75,111 @@ YOUR_LICENSE = """
  see <http://www.gnu.org/licenses/>.
 """
 
-BEGIN_LICENSE = '*** BEGIN LICENSE ***\n'
-END_LICENSE = '*** END LICENSE ***\n'
+BEGIN_LICENSE = '*** BEGIN PROJECT LICENSE ***'
+END_LICENSE = '*** END PROJECT LICENSE ***'
 
-    
-##### CODE ####
+
+
+##### CODE -- DON'T EDIT (unless you know what you are doing!) ####
 import re
-import retools
+from texttools import convert_to_regexp
 import os
 import sys
 
+YOUR_LICENSE = YOUR_LICENSE.strip()
+FILE_TYPES_LIST = FILE_TYPES.replace(' ', '').split(',')
+reBEGIN = convert_to_regexp(BEGIN_LICENSE)
+reEND = convert_to_regexp(END_LICENSE)
 
-def convert_to_regexp(txt):
-    special = '. ^ $ * + ? { } [ ] \ | ( )'.split(' ')
-    special_or = '(\\' + ')|(\\'.join(special) +')'
-    print special_or
-    
-    sfun = retools.subfun(set(special), prepend = '\\')
-    
-    print re.sub(special_or, sfun, txt)
-    
 def update_license(path):
-    '''updates the license information for the file on the path'''
+    '''updates the license information and the first line of the file
+    for the file on the path'''
     tquotes = ("'''", '"""')
-    
+
     with open(path, 'r') as f:
         text = f.readlines()
-    
+
+    for i, l in enumerate(text):
+        if text[i][-1] == '\n':
+            # take out new lines because they are annoying here
+            text[i] = text[i][:-1]
+        if KEEP_LICENSE in l:
+            return 0
+
     if text[0] != FIRST_LINE:
         text.insert(0, FIRST_LINE)
-    
+
+    license = '\n'.join((BEGIN_LICENSE, YOUR_LICENSE, END_LICENSE, ''))
     if text[1][:3] not in tquotes:
-        text = [text[0]] + [tquotes[1], YOUR_LICENSE, tquotes[1]] + text[1:]
+        # file doesn't even have tquotes! need those
+        text.insert(1, tquotes[1])
+        text.insert(1, tquotes[1])
     else:
+        # else license stays as is
+        remaining_text = text[:2]
         tq = text[1]
-        license = []
-        for n in xrange(2):
+        flic = [] # file license
+        for n in xrange(2, len(text)):
             line = text[n]
-            license.append(line)
             if tq in line:
+                text = remaining_text + text[n:]
                 break
+            flic.append(line)
         else:
             raise ValueError("could not find quote ending")
-        
-        license = '\n'.join(license)
-        cmp = re.compile('{0}.*{1}'.format(BEGIN_LICENSE, END_LICENSE))
-        cmp.find(YOUR_LICENSE, BEGIN_LICENSE + '\n' + END_LICENSE)
-        
-    
-    a = 1
-    
-    startquotes = False
-    
-    
-    cmp = re.compile('({0})|({1})'.format(*trip_quotes))
-    start = False
-    for p in cmp.split(text):
-        if p in trip_quotes and start == False:
-            start == True
+
+        flic = '\n'.join(flic)
+
+        pattern = "({0})(.*?)({1})(.*)".format(reBEGIN, reEND)
+        cmp = re.compile(pattern, re.DOTALL)
+        found = cmp.findall(flic)
+        if found:
+            found = found[0]
+            found = [i for i in found if i not in (None, '')]
+            insert_next = False
+            for i, item in enumerate(found):
+                if insert_next == True:
+                    found[i] = YOUR_LICENSE + '\n'
+                    break
+                elif item == BEGIN_LICENSE:
+                    found[i] = item + '\n'
+                    insert_next = True
+            else:
+                assert(0)
+            license = ''.join(found)
         else:
-            license
-        prev = p
-            
-    
-    
-        
-    
+            license = license + flic
+
+    text.insert(2, license)
+    text = '\n'.join(text)
+    with open(path, 'w') as f:
+        f.write(text)
+
+'''
+Publish
+
+publish is a general feature publishing tool for projects written in python.
+It's current features are the ability to write over license files
+automatically update itself to the pypy repository.
+
+Future versions should hopefully contain the ability to quick-add to
+repositories as well as other tools.
+
+Syntax
+    publish [directory] [--options[ word]]
+
+publish [directory]
+    - updates license and first line of all files in directory
+    - if directory is left out, the working directory is used.
+
+publish file
+    - same as above but for a single file
+'''
+
 if __name__ == '__main__':
-    print convert_to_regexp(BEGIN_LICENSE)
+    argv = sys.argv
+    update_license('testing_publish.py')
+
+
+
 

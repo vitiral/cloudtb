@@ -7,6 +7,14 @@ def group_num(tup):
     returns only first instance found.'''
     return next((n for n in tup if n != ''))
 
+def convert_to_regexp(txt):
+    '''converts text into a regexp, handling any special characters'''
+    special_chars = r'. ^ $ * + ? { } [ ] \ | ( )'
+    special = special_chars.split(' ')
+    special_or = '(\\' + ')|(\\'.join(special) +')'
+    sfun = subfun(set(special), prepend = '\\')
+    return re.sub(special_or, sfun, txt)
+
 def check_brackets(match_list, text, line = '?'):
     '''Checks to make sure all brackets are completed (i.e. \iffalse or \(ifblog) or \iftex
     is completed by an \fi.
@@ -48,7 +56,6 @@ class subfun(object):
 
     def __call__(self, matchobj):
         if matchobj:
-            print 'GROUPS:', matchobj.groups()
             txt = matchobj.group(0)
             if txt in self.ms:
                 return self.pre + txt + self.post

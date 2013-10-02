@@ -1,6 +1,6 @@
 import shelve
 import cProfile, profile, pstats
-from external import pyperclip
+
 from tempfile import gettempdir
 
 '''
@@ -123,6 +123,24 @@ def std_strf_time():
     '''Gets a standard datetime string'''
     return time.strftime('%b %d,%Y %X', time.localtime())
 
+''' Copy Pasting functionality to-from python'''
+from external import pyperclip
+
+class Interact(Thread):
+    def __init__(self, local):
+        self.local = local
+        Thread.__init__(self)
+
+    def run(self):
+        code.interact(local = self.local)
+
+def interact(local):
+    '''opens a shell for local interaction. Honestly using pdb is better
+    in most cases.
+    DOES NOT play nicely with most GUI applications I've seen'''
+    th = Interact(local)
+    th.start()
+
 def user_copy_array(data):
     '''Puts a 2D array into the copy buffer, split by tabs'''
     #TODO make this work for either 1D or 2D arrays
@@ -132,7 +150,7 @@ def user_copy_array(data):
     if depth == 0:
         data = ((data,),)
     elif depth == 1:
-        data = (tuple((str(c) if c != '' else '' for c in r),)
+        data = (tuple((str(c) if c != '' else '' for c in r),))
     elif depth == 2:
         data = tuple((tuple((str(c) if c != '' else '' for c in r)) for r in data))
 
@@ -152,6 +170,7 @@ def user_get_clipboard():
 def user_get_clipboard_data():
     data_str = user_get_clipboard()
     return get_data_from_csvtab(data_str)
+
 
 def dev1():
     win_run("python", "hello.py", mode = os.P_NOWAITO)
