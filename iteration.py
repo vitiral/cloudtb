@@ -118,7 +118,14 @@ class betteriter(object):
 from errors import RequestError
 
 class soliditer(object):
-    '''creates a "solid iterable" that has lookahead functionality,
+    '''
+    I have tested this fairly extensively and it should work on python 2 and 3.
+    I don't know how many times I've been given a piece of data and not 
+    known whether it is an iterator, list, xrange... whatever. I've wanted 
+    to do things do it like look ahead by 10 indexes, but there was never a 
+    convienient way to do that. Well, now there is!    
+    
+    creates a "solid iterable" that has lookahead functionality,
     but advancing the index still deletes data.
     Use the beteriter class if you have all iterators
     This function is intended to work with iterators as chunks,

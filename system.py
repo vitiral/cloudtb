@@ -32,12 +32,12 @@ http://opensource.org/licenses/MIT
 import shelve
 import cProfile, profile, pstats
 
-from tempfile import gettempdir
+
 
 '''
 Some on useful modules not included:
     - The module "atexit" can be used to write data on an exit
-
+    - the module tempfile with gettempdir
 
 '''
 
