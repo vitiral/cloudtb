@@ -48,7 +48,7 @@ except ImportError:
 
 import classtools
 
-class betteriter(object):
+class biter(object):
     '''Takes in an object that is iterable.  Allows for the following method
     calls (that should be built into iterators anyway...)
     calls:
@@ -63,11 +63,11 @@ class betteriter(object):
         - next - standard way to deal with iterators
 
     note:
-        betteriter[n] is the same as:
-        for n in betteriter:
+        biter[n] is the same as:
+        for n in biter:
             pass
         or
-        next(islice(betteriter, item))
+        next(islice(biter, item))
 
     Note: if you need to iterate directly, pull out the iter with
         myiter = iter(beteriter)
