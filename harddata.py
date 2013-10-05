@@ -171,9 +171,10 @@ def _program_this_for_me():
     
     # writing for both python 2 and 3...
     fset_path = os.path.join('extra', 'std_object_member_functions.txt')
-    with open(fset_path) as f:
-        fset = set([l.strip() for l in f])
-    myset.update(fset)    
+    if os.path.exists(fset_path):
+        with open(fset_path) as f:
+            fset = set([l.strip() for l in f])
+        myset.update(fset)    
     with open(fset_path, 'w') as f:
         f.write('\n'.join(myset))
 
@@ -212,7 +213,7 @@ def _program_this_for_me():
 #    print code_txt
         
 
-#_program_this_for_me()
+_program_this_for_me()
 
 hd = harddata(range(100))
 print hd[10]
