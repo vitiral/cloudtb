@@ -44,7 +44,6 @@ FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
 
 FIRST_LINE = '#! /usr/bin/python'
 
-
 YOUR_LICENSE = '''
 The MIT License (MIT)
 
@@ -79,7 +78,6 @@ END_LICENSE = '*** END PROJECT LICENSE ***'
 
 ##### CODE -- DON'T EDIT (unless you know what you are doing!) ####
 import pdb
-import dbe
 import re
 import texttools
 import os
@@ -214,6 +212,7 @@ if __name__ == '__main__':
         path = args.path
         print path
     
+    1/0
     update_license(path)
 
 
