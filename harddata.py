@@ -36,7 +36,7 @@ http://opensource.org/licenses/MIT
 This module was created to realize the potential of "hard data", or data
 stored on the harddrive, for memory management and speed.
 
-When I talk of speed, I am not talking computations per second in a
+When I talk of speed, I am not talking computation  s per second in a
 hypothetical universe. What I'm talking about is the same kind of speed
 that python relies on -- the user of your program.
 
@@ -59,7 +59,8 @@ much faster.
 """
 import pdb
 import cPickle
-
+import time
+    
 import tempfile
 '''
 mkdtemp(sufix = '.hd', prefix = 'pyhdd08234', dir = )
@@ -69,40 +70,95 @@ a special file named 'timeout' will be created in it
 f, path = mkstemp(suffix = '.hd', prefix='hd', dir = path)
 '''
 
-get_attr = object.__getattribute__
-set_attr = object.__setattr__
+
+
+THREAD_HANDLED = False
+THREAD_PERIOD = 0.5 # How often the therad runs
+                    
+
+__HARDDATA = []
+
+ga = object.__getattribute__
+sa = object.__setattr__
 
 class harddata(object):
     def __init__(self, data):
-        set_attr(self, '__harddata__', data)
-        set_attr(self, '__tmpfile__', tempfile.mkstemp(
-        suffix = '.hd', prefix='hd', dir = path))
+        sa(self, '__harddata__', data)
+        sa(self, '__last_accessed', time.time())     # stores time of last access
+        sa(self, '__times_accessed', 1)    # stores number of times it was accesed
 
-        
+#        sa(self, '__tmpfile__', tempfile.mkstemp(
+#            suffix = '.hd', prefix='hd', dir = path))
+#        if not THREAD_HANDLED:
+#            create_harddata_thread()
+
     def __getattribute__(self, name):
         print 'GetAttr:', name
-        ga = get_attr
-        data = ga(self, 'data')          
+        pdb.set_trace()
         try:
             return ga(self, name)
         except AttributeError:
+            data = self.__getharddata()
             return data.__getattribute__(name)
     
     def __setattr__(self, name, value):
         print 'SetAttr', name, value
-        data = self.data
+        data = self.__get_harddata()
         data.__setattr__(name, value)
-    
-    def __getitem__(self, item):
-        return self.data.__getitem__(item)
-    
-    def __getdata__(self):
-        
     
     def __storedata__(self):
         pass
     
+    def __getdata__(self, value):
+        return self.__get_harddata().__getdata__(self, value)
+    def __getitem__(self, item):
+        print 'Getitem', item
+        return self.__get_harddata().__getitem__(item)
+    
+    def __repr__(self):
+        return 'Harddata Object Wrapper for:', self.__get_harddata().__repr__()
+    
+    def __str__(self):
+        return self.__repr__()
+    
+    def __getharddata(self):
+        # obviously this needs to be more complex
+        return self.__harddata
+        
     a = 'hello world'
+
+def create_harddata_thread():
+    global THREAD_harddata
+    from errors import ModuleError
+    try:
+        THREAD_harddata
+    except NameError:
+        raise ModuleError
+
+    from threading import Thread
+    
+    class harddata_thread(Thread):
+        def __init__(self, harddata):
+            self.harddata = harddata
+            self.last_run = time.time()
+            Thread.__init__(self)
+            
+        def run(self):
+            while True:
+                start_time = time.time()
+                last_run = self.last_run()
+                #TODO: go through list in __HARDDATA and do check.
+                for hd in __HARDDATA:
+                    hd._check(time.time())
+                self.last_run = time.time()
+                if self.last_run - start_time > THREAD_PERIOD:
+                    # TODO: change this to logging. Here for debug
+                    assert(0)
+                else:
+                    time.sleep(self.last_run - start_time)
+        
+    THREAD_harddata = harddata_thread(HARDDATA)
+    
     
 hd = harddata(range(100))
 print hd.data[10]

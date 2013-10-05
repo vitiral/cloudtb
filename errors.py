@@ -38,6 +38,8 @@ class NeedModule(ImportError):
     def __str__(self, value):
         return "Module Dependency not met: " + repr(self.value)
 
-
+class ModuleError(Exception):
+    '''An error to give for module-level failures.'''
+    pass
 class RequestError(Exception):
     pass
