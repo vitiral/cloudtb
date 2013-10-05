@@ -57,7 +57,9 @@ much faster.
 
 
 """
+import sys, os
 import pdb
+import dbe
 import cPickle
 import time
     
@@ -78,54 +80,53 @@ THREAD_PERIOD = 0.5 # How often the therad runs
 
 __HARDDATA = []
 
+
+
+from extra.harddata_base import harddata_base
+#ga = harddata_base.__getattribute__
+#sa = harddata_base.__setattr__
 ga = object.__getattribute__
 sa = object.__setattr__
 
-class harddata(object):
+class harddata(harddata_base):
     def __init__(self, data):
-        sa(self, '__harddata__', data)
-        sa(self, '__last_accessed', time.time())     # stores time of last access
-        sa(self, '__times_accessed', 1)    # stores number of times it was accesed
+        sa(self, '_harddata', data)
+        sa(self, '_last_accessed', time.time())     # stores time of last access
+        sa(self, '_times_accessed', 1)    # stores number of times it was accesed
 
 #        sa(self, '__tmpfile__', tempfile.mkstemp(
 #            suffix = '.hd', prefix='hd', dir = path))
 #        if not THREAD_HANDLED:
 #            create_harddata_thread()
-
+    
+    def _get_harddata(self):
+        #TODO: Obviously this will have to be more
+        # complex
+        return ga(self, '_harddata')
+        
     def __getattribute__(self, name):
         print 'GetAttr:', name
-        pdb.set_trace()
+#        pdb.set_trace()
+#        if name == '_get_harddata':
+#            pdb.set_trace()
         try:
             return ga(self, name)
         except AttributeError:
-            data = self.__getharddata()
+            assert(name != '_get_harddata')
+            data = self._get_harddata()
             return data.__getattribute__(name)
     
-    def __setattr__(self, name, value):
-        print 'SetAttr', name, value
-        data = self.__get_harddata()
-        data.__setattr__(name, value)
-    
-    def __storedata__(self):
-        pass
-    
-    def __getdata__(self, value):
-        return self.__get_harddata().__getdata__(self, value)
-    def __getitem__(self, item):
-        print 'Getitem', item
-        return self.__get_harddata().__getitem__(item)
-    
     def __repr__(self):
-        return 'Harddata Object Wrapper for:', self.__get_harddata().__repr__()
+        return 'harddata({0})'.format(self._get_harddata().__repr__())
     
     def __str__(self):
         return self.__repr__()
-    
-    def __getharddata(self):
-        # obviously this needs to be more complex
-        return self.__harddata
         
-    a = 'hello world'
+    ##TODO: Ecetera. Need to write one for every concievable
+        # option. I need to just get a list of possible
+        # options and make a script.
+    
+
 
 def create_harddata_thread():
     global THREAD_harddata
@@ -158,8 +159,71 @@ def create_harddata_thread():
                     time.sleep(self.last_run - start_time)
         
     THREAD_harddata = harddata_thread(HARDDATA)
+
+def _program_this_for_me():
+    '''Automatically codes the harddata_base and stores
+    it in extra/harddata_base'''
+    import __builtin__
+    myset = set(['next'])
+    for n in dir(__builtin__):
+        if n != 'print':
+            myset.update(dir(eval(n)))
+    
+    # writing for both python 2 and 3...
+    fset_path = os.path.join('extra', 'std_object_member_functions.txt')
+    with open(fset_path) as f:
+        fset = set([l.strip() for l in f])
+    myset.update(fset)    
+    with open(fset_path, 'w') as f:
+        f.write('\n'.join(myset))
+
+    custom = set([
+              '__init__',
+              '__new__',
+              '__getattribute__',
+              '__doc__',
+              '__repr__',
+              '__str__',
+              '__delete__'
+             ])
+    
+    filtered = []
+    for n in myset:
+        if '__' in n and n not in custom:
+            filtered.append(n)
+    
+    filtered.sort()
     
     
+    txt_format = '''
+    def {name}(self, *args, **kwargs):
+        print "{name}: ", args, kwargs
+        return self._get_harddata().{name}(*args, **kwargs)'''
+    code = []
+    for n in filtered:
+        code.append(txt_format.format(name = n))
+    
+    code_txt = 'class harddata_base(object):' + '\n'.join(code)
+    
+    with open(os.path.join('extra', 'harddata_base.py'), 'w') as f:
+        f.write(code_txt)
+    
+    print "Updated hardata_base"
+#    print code_txt
+        
+
+#_program_this_for_me()
+
 hd = harddata(range(100))
-print hd.data[10]
 print hd[10]
+print hd[10]
+
+hda = harddata(10)
+hdb = harddata(14)
+
+print 'adding', hda + hdb
+
+if __name__ == '__main__':
+    pass
+    # Automatically programs the base function
+#    
