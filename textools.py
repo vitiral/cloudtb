@@ -33,6 +33,46 @@ import pdb
 import re, collections
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 
+def re_in(txt, rcmp_iter):
+    _len = len(txt)
+    return bool([ri for ri in rcmp_iter if ri.match(txt, 0, _len)])
+
+def replace_first(txt, rcmp_list, replacements):
+    '''returns the first replacement that has a positive match to
+    text
+        rcmp_list -- list of compiled expressions
+        replacements -- list of expressions to replace with
+    '''
+    
+    _len = len(txt)
+    assert(len(rcmp_list) == len(replacements))
+    try:
+        return next((replace[1] for replace in enumerate(replacements)
+            if rcmp_list[replace[0]].match(txt, 0, _len)))
+    except StopIteration:
+        raise ValueError("RegExp not found")
+
+def get_rcmp_list(replacement_list):
+    '''given a list of [[regex_str, replace_with], ...] return the
+    replacement list to be used with replace_first'''
+    repl = replacement_list
+    # format all subs to be in groups
+    repl = [('('+n[0]+')', n[1]) for n in repl]
+    # pull out the string format for or conversion
+    repl_str = (n[0] for n in repl)
+    # convert to or for sub matching
+    repl_or_re =  re.compile('|'.join(repl_str))
+    del repl_str
+    
+    # pre-compile for use with subfun
+    repl_re = [re.compile(n[0]) for n in repl]
+    
+    # put back together in a replacement list [[re, replacement], ...]
+    repl_re_replace = [(repl_re[i], repl[i][1]) 
+            for i in range(len(repl))]
+    
+    return repl_re_replace
+            
 def group_num(tup):
     '''returns group number of returned re from findall that is not == ""
     returns only first instance found.'''
@@ -73,6 +113,7 @@ def check_brackets(match_list, text, line = '?'):
 
     return match_compile, found, gnumbers
 
+
 class subfun(object):
     '''General use for use with re.sub. Instead of subsituting text it prepends
     or postpends text onto it and returns it whole. It also stores the text
@@ -92,11 +133,12 @@ class subfun(object):
         subbed_text = re.sub(pattern, sfun, text)
     '''
     def __init__(self, replace = None, prepend = '', postpend = '', 
-                 match_set = None):
+                 match_set = None, replace_list = None):
         self.replace = replace
         self.prepend = prepend
         self.postpend = postpend
         self.match_set = match_set
+        self.replace_dict = replace_dict
         self.subbed = []
         
     def __call__(self, matchobj):
@@ -105,6 +147,12 @@ class subfun(object):
             start_txt = txt
             if self.replace != None:
                 txt = self.replace
+            if self.replace_dict != None:
+                replace_list, replacements = zip(*self.replace_list)
+                try:
+                    txt = replace_first(txt, replace_list, replacements)
+                except ValueError:
+                    pass
             if self.match_set == None or txt in self.match_set:
                 txt = self.prepend + txt + self.postpend
             self.subbed.append((start_txt, txt))
@@ -197,3 +245,6 @@ class SpellingCorrector(object):
                       self.known_edits2(word) or
                       [word])
         return max(candidates, key=self.NWORDS.get)
+
+if __name__ == '__main__':
+    pass

@@ -246,7 +246,6 @@ def pdb_on_exception(function):
         pdb.post_mortem(tb)
     return returnfunction
 
-
 class force_iter(object):
     '''
     Can force any number of inputs to be iterators.

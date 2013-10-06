@@ -29,9 +29,10 @@ http://opensource.org/licenses/MIT
 *** END PROJECT LICENSE ***
 
 """
+import sys, os
 import shelve
 import cProfile, profile, pstats
-
+from threading import Thread
 
 
 '''
@@ -40,6 +41,9 @@ Some on useful modules not included:
     - the module tempfile with gettempdir
 
 '''
+
+def is_file_ext(path, ext):
+    n, fext = os.path.splitext(path)
 
 def import_path(fullpath, do_reload = False):
     """
@@ -94,40 +98,40 @@ else:
 
 def win_run(program, *args, **kw):
     '''For running stuff on Windows. Used in spawn'''
-     mode = kw.get("mode", os.P_WAIT)
-     for path in os.environ["PATH"].split(os.pathsep):
-          file = os.path.join(path, program) + ".exe"
-          try:
-                return os.spawnv(mode, file, (file,) + args)
-          except os.error:
-                pass
-     raise os.error, "cannot find executable"
+    mode = kw.get("mode", os.P_WAIT)
+    for path in os.environ["PATH"].split(os.pathsep):
+        file = os.path.join(path, program) + ".exe"
+        try:
+            return os.spawnv(mode, file, (file,) + args)
+        except os.error:
+            pass
+    raise os.error, "cannot find executable"
 
 def spawn(program, *args):
     '''Forgot for sure what this does but I think it spawns a new process
     that is not dependent on the python one'''
-     try:
-          # check if the os module provides a shortcut
-          return os.spawnvp(program, (program,) + args)
-     except AttributeError:
-          pass
-     try:
-          spawnv = os.spawnv
-     except AttributeError:
-          # assume it's unix
-          pid = os.fork()
-          if not pid:
-                os.execvp(program, (program,) + args)
-          return os.wait()[0]
-     else:
-          # got spawnv but no spawnp: go look for an executable
-          for path in os.environ["PATH"].split(os.pathsep):
-                file = os.path.join(path, program) + exefile
-                try:
-                     return spawnv(os.P_WAIT, file, (file,) + args)
-                except os.error:
-                     pass
-          raise IOError, "cannot find executable"
+    try:
+        # check if the os module provides a shortcut
+        return os.spawnvp(program, (program,) + args)
+    except AttributeError:
+        pass
+    try:
+        spawnv = os.spawnv
+    except AttributeError:
+        # assume it's unix
+        pid = os.fork()
+        if not pid:
+             os.execvp(program, (program,) + args)
+        return os.wait()[0]
+    else:
+        # got spawnv but no spawnp: go look for an executable
+        for path in os.environ["PATH"].split(os.pathsep):
+             file = os.path.join(path, program) + exefile
+             try:
+                 return spawnv(os.P_WAIT, file, (file,) + args)
+             except os.error:
+                 pass
+        raise IOError, "cannot find executable"
 
 def module_path(local_function):
     ''' returns the module path without the use of __file__.  Requires a function defined
@@ -201,7 +205,6 @@ def user_get_clipboard():
 def user_get_clipboard_data():
     data_str = user_get_clipboard()
     return get_data_from_csvtab(data_str)
-
 
 def dev1():
     win_run("python", "hello.py", mode = os.P_NOWAITO)
