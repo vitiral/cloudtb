@@ -68,7 +68,23 @@ class biter(object):
             pass
         or
         next(islice(biter, item))
-
+        
+    Usage:
+        # want to extend my iterator
+        myiter = biter(myiter)
+        bi2 = biter(range(100)) # use xrange in python2
+        myiter = myiter + bi2
+        # ... other stuff
+        
+        # now I only want every 5th element
+        myiter = myiter[::5]
+        
+        # ... other stuff
+        # Now I just want the 20th element (note: removes elements before.
+                # if you want to keep these elements use soliditer)
+        el20 = myiter[20]
+        
+        
     Note: if you need to iterate directly, pull out the iter with
         myiter = iter(beteriter)
     this will use all c code and be super fast
