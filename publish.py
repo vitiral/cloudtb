@@ -1,93 +1,78 @@
-'''
-*** BEGIN FILE LICENSE ***
-
-The MIT License (MIT)
-
-Copyright (c) 2013 Garrett Berg cloudformdesign.com
-An updated version of this file can be found at:
-https://github.com/cloudformdesign/cloudtb
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-http://opensource.org/licenses/MIT
-
-*** END FILE LICENSE ***
-
-Documentation
-This file performs the necessary actions for standard publishing of works in python.
-Primarily it updates the License and hosts the file on the selected servers of the
-global variables.
-
-Change the global variables below to reflect your project
-'''
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#    The MIT License (MIT)
+#    
+#    Copyright (c) 2013 Garrett Berg cloudformdesign.com
+#    An updated version of this file can be found at:
+#    https://github.com/cloudformdesign/cloudtb
+#    
+#    Permission is hereby granted, free of charge, to any person obtaining a copy
+#    of this software and associated documentation files (the "Software"), to deal
+#    in the Software without restriction, including without limitation the rights
+#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#    copies of the Software, and to permit persons to whom the Software is
+#    furnished to do so, subject to the following conditions:
+#    
+#    The above copyright notice and this permission notice shall be included in
+#    all copies or substantial portions of the Software.
+#    
+#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#    THE SOFTWARE.
+#    
+#    http://opensource.org/licenses/MIT
 
 PYTHON_VERSION = 2
 '''Add your file types to list below -- comma separated'''
-FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py, .tex'
+FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
 
-FIRST_LINE = '#! /usr/bin/python'
+FIRST_LINE = '#!/usr/bin/python'
 SECOND_LINE = '# -*- coding: utf-8 -*-'
 
 YOUR_LICENSE = '''
-The MIT License (MIT)
-
-Copyright (c) 2013 Garrett Berg cloudformdesign.com
-An updated version of this file can be found at:
-https://github.com/cloudformdesign/cloudtb
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-http://opensource.org/licenses/MIT
+#    The MIT License (MIT)
+#    
+#    Copyright (c) 2013 Garrett Berg cloudformdesign.com
+#    An updated version of this file can be found at:
+#    https://github.com/cloudformdesign/cloudtb
+#    
+#    Permission is hereby granted, free of charge, to any person obtaining a copy
+#    of this software and associated documentation files (the "Software"), to deal
+#    in the Software without restriction, including without limitation the rights
+#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#    copies of the Software, and to permit persons to whom the Software is
+#    furnished to do so, subject to the following conditions:
+#    
+#    The above copyright notice and this permission notice shall be included in
+#    all copies or substantial portions of the Software.
+#    
+#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#    THE SOFTWARE.
+#
 '''
+LAST_LINE = '#    http://opensource.org/licenses/MIT'
 
 KEEP_LICENSE = '*** KEEP LICENSE ***'
-BEGIN_LICENSE = '*** BEGIN PROJECT LICENSE ***'
-END_LICENSE = '*** END PROJECT LICENSE ***'
 
 ##### CODE -- DON'T EDIT (unless you know what you are doing!) ####
 import pdb
 import re
-import textools
 import os
 import sys
 
-YOUR_LICENSE = YOUR_LICENSE.strip()
-FILE_TYPES_SET = set(FILE_TYPES.replace(' ', '').split(','))
-reBEGIN = textools.convert_to_regexp(BEGIN_LICENSE)
-reEND = textools.convert_to_regexp(END_LICENSE)
+import textools
 
+
+    
 def update_license(path):
     '''updates the license information and the first line of the file
     for the file on the path'''
@@ -96,85 +81,42 @@ def update_license(path):
     fext = os.path.splitext(path)[1]
     print "Extention: ", fext
     fname = os.path.split(path)[1]
+    FILE_TYPES_SET = set(FILE_TYPES.replace(' ', '').split(','))
     if fname[0] == '.':
         return
     elif fext == '' and os.path.isdir(path):
         pass
     elif fext not in FILE_TYPES_SET:
         return
-        
+            
     if os.path.isdir(path):
         for f in os.listdir(path):
             new_path = os.path.join(path, f)
             update_license(new_path)
         return
-        
-    tquotes = ("'''", '"""')
+
     with open(path, 'r') as f:
-        text = f.readlines()
-
-    for i, l in enumerate(text):
-        if text[i][-1] == '\n':
-            # take out new lines because they are annoying here
-            text[i] = text[i][:-1]
-        if KEEP_LICENSE in l:
-            return 0
-
-    if not len(text):
-        text.append('')
+        text = f.read()
+    
+    if KEEP_LICENSE in text:
+        return
+    
+    your_license = YOUR_LICENSE.strip()
+    
+    
+    full_header = '{fl}\n{sl}\n{license}\n{last_line}'.format(fl = FIRST_LINE,
+                sl = SECOND_LINE, license = your_license, last_line = LAST_LINE)
         
-    if text[0] != FIRST_LINE:
-        text.insert(0, FIRST_LINE)
-    if text[1] != SECOND_LINE:
-        text.insert(1, SECOND_LINE)
-        
-    license_line = 2
-    license = '\n'.join((BEGIN_LICENSE, YOUR_LICENSE, END_LICENSE, ''))
-    if text[license_line][:3] not in tquotes:
-        # file doesn't even have tquotes! need those
-        text.insert(1, tquotes[1])
-        text.insert(1, tquotes[1])
+    ctore = textools.convert_to_regexp
+    sub_re = r'{fl}[\w\W]*?{last_line}'.format(fl = ctore(FIRST_LINE), 
+            last_line = ctore(LAST_LINE))
+    re_cmp = re.compile(sub_re)
+
+    if re_cmp.match(text):
+        text = re_cmp.sub(full_header, text, count = 1)
     else:
-        # Else tquotes stay where they are
-        remaining_text = text[:2]
-        tq = text[license_line][:3]
-        
-        #TODO: need to check they didn't do tq on same line
-        
-        flic = [] # file license
-        for n in xrange(2, len(text)):
-            line = text[n]
-            if tq in line:
-                text = remaining_text + text[n:]
-                break
-            flic.append(line)
-        else:
-            raise ValueError("could not find quote ending")
-
-        flic = '\n'.join(flic)
-
-        pattern = "({0})(.*?)({1})(.*)".format(reBEGIN, reEND)
-        cmp = re.compile(pattern, re.DOTALL)
-        found = cmp.findall(flic)
-        if found:
-            found = found[0]
-            found = [i for i in found if i not in (None, '')]
-            insert_next = False
-            for i, item in enumerate(found):
-                if insert_next == True:
-                    found[i] = YOUR_LICENSE + '\n'
-                    break
-                elif item == BEGIN_LICENSE:
-                    found[i] = item + '\n'
-                    insert_next = True
-            else:
-                assert(0)
-            license = ''.join(found)
-        else:
-            license = license + flic
-
-    text.insert(2, license)
-    text = '\n'.join(text)
+        text = full_header + '\n' + text
+    
     uin = raw_input("About to overwrite license for \n<" + path + '>\n. Press y '
         'if ok')
     if uin.lower() == 'y':
