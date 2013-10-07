@@ -30,12 +30,21 @@ http://opensource.org/licenses/MIT
 
 """
 import pdb
+import os
 import re, collections
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
+CMP_TYPE = type(re.compile(''))
 
 def re_in(txt, rcmp_iter):
     _len = len(txt)
     return bool([ri for ri in rcmp_iter if ri.match(txt, 0, _len)])
+
+def ensure_parenthesis(reg_exp):
+    if reg_exp == '':
+        return reg_exp
+    if reg_exp[0] != '(' or reg_exp[-1] != ')':
+        reg_exp = '(' + reg_exp + ')'
+    return reg_exp
 
 def replace_first(txt, rcmp_list, replacements):
     '''returns the first replacement that has a positive match to
@@ -53,11 +62,12 @@ def replace_first(txt, rcmp_list, replacements):
         raise ValueError("RegExp not found")
 
 def get_rcmp_list(replacement_list):
-    '''given a list of [[regex_str, replace_with], ...] return the
-    replacement list to be used with replace_first'''
+    '''given a list of [[regex_str, replace_with], ...]
+    returns the values ored together and the list to be 
+    used with replace_first'''
     repl = replacement_list
     # format all subs to be in groups
-    repl = [('('+n[0]+')', n[1]) for n in repl]
+    repl = [(ensure_parenthesis(n[0]), n[1]) for n in repl]
     # pull out the string format for or conversion
     repl_str = (n[0] for n in repl)
     # convert to or for sub matching
@@ -68,11 +78,22 @@ def get_rcmp_list(replacement_list):
     repl_re = [re.compile(n[0]) for n in repl]
     
     # put back together in a replacement list [[re, replacement], ...]
-    repl_re_replace = [(repl_re[i], repl[i][1]) 
+    replace_re = [(repl_re[i], repl[i][1]) 
             for i in range(len(repl))]
     
-    return repl_re_replace
-            
+    return repl_or_re, replace_re
+
+def replace_text_with_list(replacement_list, text):
+    '''Uses get_rcmp_list and replace_first to replace the first instances
+    of a successful match with their coresponding index. I.e.
+    [['a' : 'A'], ['b' : 'B']] would replace all 'a's with 'A's. It is more
+    than this though, as the first value can be a regular expression, so you
+    could use 'a*' to replace all repetative a's, while simultaniously only
+    replacing one b.'''
+    repl_or_re, relace_re = get_rcmp_list(replacement_list)
+    subfun = subfun(replacement_list = replacement_list)
+    return repl_or_re.sub(subfun, text)
+    
 def group_num(tup):
     '''returns group number of returned re from findall that is not == ""
     returns only first instance found.'''
@@ -85,34 +106,6 @@ def convert_to_regexp(txt):
     special_or = '(\\' + ')|(\\'.join(special) +')'
     sfun = subfun(match_set = set(special), prepend = '\\')
     return re.sub(special_or, sfun, txt)
-
-def check_brackets(match_list, text, line = '?'):
-    '''Checks to make sure all brackets are completed (i.e. \iffalse or \(ifblog) or \iftex
-    is completed by an \fi.
-    Match list uses first part as part of list, final part as end.
-
-    Example input:
-    found, gnumbers = check_brackets([r'(\\iffalse)', r'\\(ifblog)', r'\\(iftex)', r'\\(if), r'\\(fi)'],
-                                      text)
-    note: only returns the first group number found!
-    raises ValueError on failure
-
-    return match_compile, found, gnumbers
-    '''
-    match_cmp = re.compile('|'.join(match_list))
-    found = match_cmp.findall(m)
-    gnumbers = [group_num(n) for n in found]
-    fi = 0
-    for n in gnumbers:
-        if n != len(gnumbers):
-            n += 1
-        else:
-            n -= 1
-    if n != 0:
-        raise ValueError("Brackets not matched")
-
-    return match_compile, found, gnumbers
-
 
 class subfun(object):
     '''General use for use with re.sub. Instead of subsituting text it prepends
@@ -138,7 +131,7 @@ class subfun(object):
         self.prepend = prepend
         self.postpend = postpend
         self.match_set = match_set
-        self.replace_dict = replace_dict
+        self.replace_list = replace_list
         self.subbed = []
         
     def __call__(self, matchobj):
@@ -147,7 +140,7 @@ class subfun(object):
             start_txt = txt
             if self.replace != None:
                 txt = self.replace
-            if self.replace_dict != None:
+            if self.replace_list != None:
                 replace_list, replacements = zip(*self.replace_list)
                 try:
                     txt = replace_first(txt, replace_list, replacements)
@@ -158,9 +151,7 @@ class subfun(object):
             self.subbed.append((start_txt, txt))
             return txt
 
-
-
-def replace_regexp(path, regexp, replace):
+def system_replace_regexp(path, regexp, replace):
     '''A powerful tool that is similar to searchmonkey or other tools...
     but actually works for python regexp! Does user output to make sure
     you want to actually replace everything you said you did.
@@ -168,7 +159,7 @@ def replace_regexp(path, regexp, replace):
     if os.path.isdir(path):
         for f in os.listdir(path):
             new_path = os.path.join(path, f)
-            replace_regexp(new_path, regexp, replace)
+            system_replace_regexp(new_path, regexp, replace)
         return
     
     with open(path) as f:
@@ -179,7 +170,7 @@ def replace_regexp(path, regexp, replace):
         print "-- Could not find string on path:", path
         return
     
-    mysub = texttools.subfun(replace = '')
+    mysub = subfun(replace = '')
     start_text = text
     text = rcmp.sub(mysub, text)
     file_msg_start = ('##### About to operate on file < {path} > with the '

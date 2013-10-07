@@ -516,6 +516,13 @@ def get_first(data):
 ''' These functions are all fast list lookups not supported by any module in
 python. They use iterators and compressors to do things as fast as possible in
 native python'''
+def is_all_type(iterator, dtype):
+    try:
+        next((n for n in data if type(data) != dtype))
+        return False
+    except StopIteration:
+        return True
+                
 
 def special_figt(data_list, value, start = 0):
     index = first_index_gt(data_list, value, start)
