@@ -39,10 +39,10 @@ Change the global variables below to reflect your project
 
 PYTHON_VERSION = 2
 '''Add your file types to list below -- comma separated'''
-
-FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
+FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py, .tex'
 
 FIRST_LINE = '#! /usr/bin/python'
+SECOND_LINE = '# -*- coding: utf-8 -*-'
 
 YOUR_LICENSE = '''
 The MIT License (MIT)
@@ -79,14 +79,14 @@ END_LICENSE = '*** END PROJECT LICENSE ***'
 ##### CODE -- DON'T EDIT (unless you know what you are doing!) ####
 import pdb
 import re
-import texttools
+import textools
 import os
 import sys
 
 YOUR_LICENSE = YOUR_LICENSE.strip()
 FILE_TYPES_SET = set(FILE_TYPES.replace(' ', '').split(','))
-reBEGIN = texttools.convert_to_regexp(BEGIN_LICENSE)
-reEND = texttools.convert_to_regexp(END_LICENSE)
+reBEGIN = textools.convert_to_regexp(BEGIN_LICENSE)
+reEND = textools.convert_to_regexp(END_LICENSE)
 
 def update_license(path):
     '''updates the license information and the first line of the file
@@ -125,16 +125,19 @@ def update_license(path):
         
     if text[0] != FIRST_LINE:
         text.insert(0, FIRST_LINE)
-
+    if text[1] != SECOND_LINE:
+        text.insert(1, SECOND_LINE)
+        
+    license_line = 2
     license = '\n'.join((BEGIN_LICENSE, YOUR_LICENSE, END_LICENSE, ''))
-    if text[1][:3] not in tquotes:
+    if text[license_line][:3] not in tquotes:
         # file doesn't even have tquotes! need those
         text.insert(1, tquotes[1])
         text.insert(1, tquotes[1])
     else:
         # Else tquotes stay where they are
         remaining_text = text[:2]
-        tq = text[1][:3]
+        tq = text[license_line][:3]
         
         #TODO: need to check they didn't do tq on same line
         
@@ -199,8 +202,8 @@ publish file
     - same as above but for a single file
 '''
 
-        
-if __name__ == '__main__':
+
+def main():
     import argparse
     if len(sys.argv) < 2:
         path = os.getcwd()
@@ -212,8 +215,10 @@ if __name__ == '__main__':
         path = args.path
         print path
     
-    1/0
     update_license(path)
+    
+if __name__ == '__main__':
+    main()
 
 
 
