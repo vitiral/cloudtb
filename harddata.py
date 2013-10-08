@@ -25,7 +25,7 @@
 #    THE SOFTWARE.
 #    
 #    http://opensource.org/licenses/MIT
-'''
+"""
 This module was created to realize the potential of "hard data", or data
 stored on the harddrive, for memory management and speed.
 
@@ -57,6 +57,8 @@ import cPickle
 import time
     
 import tempfile
+
+import system
 '''
 mkdtemp(sufix = '.hd', prefix = 'pyhdd08234', dir = )
 I want to use mkdtemp to create the temporary directory
@@ -69,10 +71,7 @@ f, path = mkstemp(suffix = '.hd', prefix='hd', dir = path)
 
 THREAD_HANDLED = False
 THREAD_PERIOD = 0.5 # How often the therad runs
-                    
-
-__HARDDATA = []
-
+_HARDDATA = []
 
 
 from extra.harddata_base import harddata_base
@@ -80,6 +79,10 @@ from extra.harddata_base import harddata_base
 #sa = harddata_base.__setattr__
 ga = object.__getattribute__
 sa = object.__setattr__
+
+# DO NOT MODIFY THESE
+TIMER_FILE = 'pytimer.time'     # DO NOT CHANGE
+TEMP_DIRECTORY = None
 
 class harddata(harddata_base):
     def __init__(self, data):
@@ -118,8 +121,6 @@ class harddata(harddata_base):
     ##TODO: Ecetera. Need to write one for every concievable
         # option. I need to just get a list of possible
         # options and make a script.
-    
-
 
 def create_harddata_thread():
     global THREAD_harddata
@@ -130,6 +131,7 @@ def create_harddata_thread():
         raise ModuleError
 
     from threading import Thread
+    
     
     class harddata_thread(Thread):
         def __init__(self, harddata):
@@ -150,9 +152,30 @@ def create_harddata_thread():
                     assert(0)
                 else:
                     time.sleep(self.last_run - start_time)
+                manage_temp_dirs()
         
-    THREAD_harddata = harddata_thread(HARDDATA)
+    THREAD_harddata = harddata_thread(_HARDDATA)
 
+def create_temp_directory():
+    global TEMP_DIRECTORY
+    tmpdir = tempfile.mkdtemp(sufix = '.hd', prefix = STR_TEMP_PREFIX, 
+                              dir = system.get_temp_directory())
+    TEMP_DIRECTORY = tmpdir
+    manage_temp_dirs()
+
+def manage_temp_dirs():
+    update_timer_file()
+    for tmpf in os.listdir(system.get_temp_directory()):
+        
+    
+    
+def update_timer_file():
+    '''updates the file timer so that external python processes don't
+    delete the temp data'''
+    global TEMP_DIRECTORY
+    with open(os.path.join(TEMP_DIRECTORY, TIMER_FILE), 'w') as f:
+        f.write(time.ctime(time.time()))
+    
 def _program_this_for_me():
     '''Automatically codes the harddata_base and stores
     it in extra/harddata_base'''

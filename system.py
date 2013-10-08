@@ -39,6 +39,17 @@ Some on useful modules not included:
 
 '''
 
+
+def get_temp_file(no_thread = None):
+    '''An extremely simple call that returns a temp file. All things are
+    handled by the system module, which automatically cleans up after itself.
+    HOWEVER, the use of this function calls a thread that updates a file
+    timer every 30 seconds. If that is a problem, then you must handle this
+    thread yourself (otherwise external python processes may delete your
+    temp data!)
+    '''
+    pass
+    
 def is_file_ext(path, ext):
     n, fext = os.path.splitext(path)
 
@@ -148,8 +159,11 @@ def safe_eval(eval_str, variable_dict = None):
         variable_dict = {}
     return eval(eval_str, {"__builtins__" : None}, variable_dict)
 
-def get_user_folder():
+def get_user_directory():
     return os.environ['USERPROFILE']
+
+def get_temp_directory():
+    return tempfile.gettempdir()
 
 def std_strf_time():
     '''Gets a standard datetime string'''

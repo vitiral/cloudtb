@@ -36,8 +36,6 @@ def assign_to_self(self, assign_variables):
           exec('self.{0} = value'.format(name))
           #print eval('self.{0}'.format(name))
 
-
-
 def slice_synatx(args):
     '''figures out most of slice syntax for you.
     Built to mimic itertools.islice -- can also just

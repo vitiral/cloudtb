@@ -30,6 +30,8 @@ import pdb
 import os
 import re, collections
 import iteration
+
+from simple_classes import File, Folder
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
 
@@ -37,54 +39,126 @@ CMP_TYPE = type(re.compile(''))
 def format_re_search(list_data):
     return ''.join([n if type(n) == str else repr(n) for n in list_data])
 
-def re_search(regexp, text, start = 0, end = 0):
+def get_original_str(re_searched):
+    return ''.join([str(n) for n in re_searched])
+
+def re_search_folders(regexp, file_path = None, base_folder = None, 
+                      recurse = True, max_len_searched = None):
+    '''
+    This is the workhorse of Regui.
+    Inputs:
+        regexp -- either text or compiled regexp
+        file_path -- if specified, only opens and analyzes a single file.
+        base_folder -- analyzes all files in the folder. If recurse == True,
+            calls itself for subsequent folders.
+        
+    Outputs:
+        - if file_path was specified, outputs the re_search results 
+            from that file (outputs list of strings and RegGroupParts)
+        - Otherwise it outputs a folder object who's self.files attributes
+            contains a list of Folder classes and File classes. Get the data
+            by calling File.get_data()
+    '''
+    if type(regexp) in (str, unicode):
+        regexp = re.compile(regexp)
+    
+    if file_path != None:
+        with open(file_path) as f:
+            return re_search(regexp, f.read(), stop = max_len_searched)
+    
+    if base_folder == None:
+        raise ValueError("Must specify either a file or a base folder")
+    
+    ftree = []
+    for f in os.listdir(base_folder):
+        path = os.path.join(base_folder)
+        
+        if os.path.isdir(path):
+            ftree.append(re_search_folders)
+        
+    
+    
+    
+def re_search(regexp, text, start = 0, end = None):
     '''Research your re!
     
     The same as re.search except returns a list of text and objects.
     These objects give you much more information on how your regexp
     processed the text.
     
+    EXAMPLE:
+    >>> text = """Researching my re search is really easy with this handy new \
+tool! It shows me my matches and group number, I think it is great that  \
+they're seen in this new light!"""
+    >>> regexp = r'([Rr]e ?se\w*)|(([Tt]h)?is)'  # matches any capitalization
+        # of "re se..." where the space is optional, and also will match This, 
+        # this, or is
     >>> researched = re_search(regexp, text)
->>> print format_re_search(researched)
-Researching my {0}(re search)<P0> {1}(is)<P2> really easy with {2}(thhis)<P2>
- handy new tool!It shows me my matches and group number, I think it {3}(is)<P2>
- great that  they'{4}(re seen)<P0> in {5}(thhis)<P2> new light!
+    >>> print format_re_search(researched)
+<*m0>[[{Researching}<g0>]] my <*m1>[[{re search}<g0>]] <*m2>[[{is}<g1>]] really
+ easy with <*m3>[[{this}<g1>]] handy new tool! It shows me my matches and group
+ number, I think it <*m4>[[{is}<g1>]] great that  they'<*m5>[[{re seen}<g0>]]
+ in <*m6>[[{this}<g1>]] new light!
+     
+    Analyzing Output:
+        The re_search function formats the output into a (semi) easy to read
+        format as follows:
+        <*m#>[[match_text]] - This is the text you would get from re.findall, 
+                                where the # is the index you would get.
+        {group_text}<g#>    - This is the text of the group inside the match, 
+                                with the coresponding group number (#).
+    
+    The actual output of the funcion is a list containing strings and
+    RegGroupPart objects of the searched text
+    
+    For easier to read formating, use the GUI tool #TODO: name of gui tool
 '''
-    stop = 0
+    if end == None:
+        end = len(text)
+    absolute_end = end
+    del end
+    
+    stop = start
     if type(regexp) == str:    
         regexp = re.compile(regexp)
     data_list = []
     match = 0
-    prev_stop = 0
-    while True:
-        searched = regexp.search(text, stop + 1)
+    prev_stop = stop
+    while stop < absolute_end:
+        searched = regexp.search(text, stop, absolute_end)
         if searched == None:
-            data_list.append(text[stop:])
-            return data_list
+            if not data_list:   # no match found
+                return None
+            break
         groups = searched.groups()
+        span = searched.span()
+        start, stop = span
         
-        start, stop = searched.span()
         data_list.append(text[prev_stop:start])
         
         index = iteration.first_index_ne(groups, None)
-        new_RegGroupPart = RegGroupPart(groups, index, match = match, regcmp = regexp)
+        new_RegGroupPart = RegGroupPart(groups, index, 
+                                        match_data = (match, span, regexp))
         upd_val, null = new_RegGroupPart.update()
         assert(upd_val == len(groups))
-        
         data_list.append(new_RegGroupPart)
+        assert(get_original_str(data_list) == text[:stop])
         prev_stop = stop
         match += 1
+    
+    data_list.append(text[stop:])
+    return data_list
 
 class RegGroupPart(object):
-    def __init__(self, groups, index, match = None, regcmp = None):
+    def __init__(self, groups, index, match_data = None):
+        ''' match_data = match_num, span (in outside tex), and regcmp 
+        it only exists for the outside match (not internal groups)'''
         self.groups = groups
         self.index = index
         self.text = groups[index]
         self.data_list = None
-        self.match = match
-        self.regcmp = regcmp
+        self.match_data = match_data
         self.is_updated = False
-        assert(self.text == groups[self.index])
     
     def update(self):
         '''Goes through it's own text and figures out if there
@@ -97,6 +171,8 @@ class RegGroupPart(object):
         # recursive function. The index increments on each call to itself
         index = self.index + 1
         while index < len(groups):
+#            if self.text == 'this':
+#                pdb.set_trace()
             gtxt = groups[index]
             if gtxt == None:
                 index += 1
@@ -116,23 +192,23 @@ class RegGroupPart(object):
             index, end_i_obj = new_RegGroupPart.update()
             end_i += end_i_obj
             data_list.append(new_RegGroupPart)
-        else:
-            # index went above bounds.
+        else:   # loop ended on it's own, cleanup.
             if not data_list:   # you never even entered the loop
                 data_list = [text]
-                end_i = len(text)
-            else:
-                # need to add final bits of text.
+            else:# need to add final bits of text.
                 data_list.append(text[end_i:])
+            end_i = len(text)   # all text processed
             
         self.is_updated = True
         self.data_list = [n for n in data_list if n != '']
+        assert(get_original_str(self.data_list) == self.text)
         return index, end_i
     
     def __repr__(self):
         start, end = '', ''
-        if self.match != None:
-            start = '<*m{0}>[['.format(self.match)
+        if self.match_data != None:
+            match = self.match_data[0]
+            start = '<*m{0}>[['.format(match)
             end = r']]'
         str_data = ''.join([str(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.index) + end
@@ -344,7 +420,7 @@ class SpellingCorrector(object):
 
 if __name__ == '__main__':
     import dbe
-    text = ("Researching my re search is really easy with this handy new tool!"
+    text = ("Researching my re search is really easy with this handy new tool! "
         "It shows me my matches and group number, I think it is great that  "
         "they're seen in this new light!")
     regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
