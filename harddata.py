@@ -59,6 +59,9 @@ import time
 import tempfile
 
 import system
+import textools
+import re
+
 '''
 mkdtemp(sufix = '.hd', prefix = 'pyhdd08234', dir = )
 I want to use mkdtemp to create the temporary directory
@@ -74,7 +77,7 @@ THREAD_PERIOD = 0.5 # How often the therad runs
 _HARDDATA = []
 
 
-from extra.harddata_base import harddata_base
+
 #ga = harddata_base.__getattribute__
 #sa = harddata_base.__setattr__
 ga = object.__getattribute__
@@ -84,43 +87,12 @@ sa = object.__setattr__
 TIMER_FILE = 'pytimer.time'     # DO NOT CHANGE
 TEMP_DIRECTORY = None
 
-class harddata(harddata_base):
-    def __init__(self, data):
-        sa(self, '_harddata', data)
-        sa(self, '_last_accessed', time.time())     # stores time of last access
-        sa(self, '_times_accessed', 1)    # stores number of times it was accesed
-
-#        sa(self, '__tmpfile__', tempfile.mkstemp(
-#            suffix = '.hd', prefix='hd', dir = path))
-#        if not THREAD_HANDLED:
-#            create_harddata_thread()
-    
-    def _get_harddata(self):
-        #TODO: Obviously this will have to be more
-        # complex
-        return ga(self, '_harddata')
-        
-    def __getattribute__(self, name):
-        print 'GetAttr:', name
-#        pdb.set_trace()
-#        if name == '_get_harddata':
-#            pdb.set_trace()
-        try:
-            return ga(self, name)
-        except AttributeError:
-            assert(name != '_get_harddata')
-            data = self._get_harddata()
-            return data.__getattribute__(name)
-    
-    def __repr__(self):
-        return 'harddata({0})'.format(self._get_harddata().__repr__())
-    
-    def __str__(self):
-        return self.__repr__()
-        
-    ##TODO: Ecetera. Need to write one for every concievable
-        # option. I need to just get a list of possible
-        # options and make a script.
+STR_TEMP_PREFIX = 'pyhdd08234'
+STR_TEMP_SUFIX = '.hd'
+tmp_regexp = (textools.convert_to_regexp(STR_TEMP_PREFIX) +
+                r'(.*?)' +
+              textools.convert_to_regexp(STR_TEMP_SUFIX))
+tmp_regexp = re.compile(tmp_regexp)
 
 def create_harddata_thread():
     global THREAD_harddata
