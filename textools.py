@@ -29,8 +29,116 @@
 import pdb
 import os
 import re, collections
+import iteration
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
+
+
+def format_re_search(list_data):
+    return ''.join([n if type(n) == str else repr(n) for n in list_data])
+
+def re_search(regexp, text, start = 0, end = 0):
+    '''Research your re!
+    
+    The same as re.search except returns a list of text and objects.
+    These objects give you much more information on how your regexp
+    processed the text.
+    
+    >>> researched = re_search(regexp, text)
+>>> print format_re_search(researched)
+Researching my {0}(re search)<P0> {1}(is)<P2> really easy with {2}(thhis)<P2>
+ handy new tool!It shows me my matches and group number, I think it {3}(is)<P2>
+ great that  they'{4}(re seen)<P0> in {5}(thhis)<P2> new light!
+'''
+    stop = 0
+    if type(regexp) == str:    
+        regexp = re.compile(regexp)
+    data_list = []
+    match = 0
+    prev_stop = 0
+    while True:
+        searched = regexp.search(text, stop + 1)
+        if searched == None:
+            data_list.append(text[stop:])
+            return data_list
+        groups = searched.groups()
+        
+        start, stop = searched.span()
+        data_list.append(text[prev_stop:start])
+        
+        index = iteration.first_index_ne(groups, None)
+        new_RegGroupPart = RegGroupPart(groups, index, match = match, regcmp = regexp)
+        upd_val, null = new_RegGroupPart.update()
+        assert(upd_val == len(groups))
+        
+        data_list.append(new_RegGroupPart)
+        prev_stop = stop
+        match += 1
+
+class RegGroupPart(object):
+    def __init__(self, groups, index, match = None, regcmp = None):
+        self.groups = groups
+        self.index = index
+        self.text = groups[index]
+        self.data_list = None
+        self.match = match
+        self.regcmp = regcmp
+        self.is_updated = False
+        assert(self.text == groups[self.index])
+    
+    def update(self):
+        '''Goes through it's own text and figures out if there
+        are any groups inside of itself. Returns the index + 1 of the
+        last group it finds'''
+        assert(not self.is_updated)
+        text, groups = self.text, self.groups
+        data_list = []
+        end_i = 0
+        # recursive function. The index increments on each call to itself
+        index = self.index + 1
+        while index < len(groups):
+            gtxt = groups[index]
+            if gtxt == None:
+                index += 1
+                continue
+            begin_i = text.find(gtxt, end_i) #+1 if end_i != 0 else 0)
+            if begin_i == -1:
+                assert(end_i == 0)
+                assert(len(data_list) == 0)
+                if text == '.':
+                    pdb.set_trace()
+                data_list = [text]
+                end_i = len(text)
+                break
+            data_list.append(text[end_i:begin_i]) # append raw text in between
+            end_i = begin_i
+            new_RegGroupPart = RegGroupPart(groups, index)
+            index, end_i_obj = new_RegGroupPart.update()
+            end_i += end_i_obj
+            data_list.append(new_RegGroupPart)
+        else:
+            # index went above bounds.
+            if not data_list:   # you never even entered the loop
+                data_list = [text]
+                end_i = len(text)
+            else:
+                # need to add final bits of text.
+                data_list.append(text[end_i:])
+            
+        self.is_updated = True
+        self.data_list = [n for n in data_list if n != '']
+        return index, end_i
+    
+    def __repr__(self):
+        start, end = '', ''
+        if self.match != None:
+            start = '<*m{0}>[['.format(self.match)
+            end = r']]'
+        str_data = ''.join([str(n) for n in self.data_list])
+        return start + '{{{0}}}<g{1}>'.format(str_data, self.index) + end
+
+    def __str__(self):
+        return self.text
 
 def re_in(txt, rcmp_iter):
     _len = len(txt)
@@ -235,4 +343,12 @@ class SpellingCorrector(object):
         return max(candidates, key=self.NWORDS.get)
 
 if __name__ == '__main__':
+    import dbe
+    text = ("Researching my re search is really easy with this handy new tool!"
+        "It shows me my matches and group number, I think it is great that  "
+        "they're seen in this new light!")
+    regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
+    researched = re_search(regexp, text)
+    print researched, '\n'
+    print format_re_search(researched)
     pass

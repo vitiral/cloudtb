@@ -26,6 +26,7 @@
 #    
 #    http://opensource.org/licenses/MIT
 
+# commiting a change from spyder
 PYTHON_VERSION = 2
 '''Add your file types to list below -- comma separated'''
 FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
