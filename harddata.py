@@ -73,10 +73,9 @@ f, path = mkstemp(suffix = '.hd', prefix='hd', dir = path)
 
 
 THREAD_HANDLED = False
-THREAD_PERIOD = 0.5 # How often the therad runs
-_HARDDATA = []
-
-
+THREAD_PERIOD = 30 # How often the therad runs in seconds
+DELETE_TMP_AFTER = 60*60    # deletes unupdated temporary files if their
+                            # timer file is not updated in an hour
 
 #ga = harddata_base.__getattribute__
 #sa = harddata_base.__setattr__
@@ -86,6 +85,7 @@ sa = object.__setattr__
 # DO NOT MODIFY THESE
 TIMER_FILE = 'pytimer.time'     # DO NOT CHANGE
 TEMP_DIRECTORY = None
+_HARDDATA = []
 
 STR_TEMP_PREFIX = 'pyhdd08234'
 STR_TEMP_SUFIX = '.hd'
@@ -104,7 +104,6 @@ def create_harddata_thread():
 
     from threading import Thread
     
-    
     class harddata_thread(Thread):
         def __init__(self, harddata):
             self.harddata = harddata
@@ -115,8 +114,7 @@ def create_harddata_thread():
             while True:
                 start_time = time.time()
                 last_run = self.last_run()
-                #TODO: go through list in __HARDDATA and do check.
-                for hd in __HARDDATA:
+                for hd in _HARDDATA:
                     hd._check(time.time())
                 self.last_run = time.time()
                 if self.last_run - start_time > THREAD_PERIOD:
@@ -135,9 +133,18 @@ def create_temp_directory():
     TEMP_DIRECTORY = tmpdir
     manage_temp_dirs()
 
+def check_timer(folder_path):
+    timer_path = os.path.join(TEMP_DIRECTORY, TIMER_FILE)
+    if time.time() - os.path.getatime(timer_path) > DELETE_TMP_AFTER:
+        import shutil
+        shutil.rmtree(folder_path, onerror = )
+    
 def manage_temp_dirs():
     update_timer_file()
-    for tmpf in os.listdir(system.get_temp_directory()):
+    temp_folders = (n for n in os.listdir(system.get_temp_directory()) 
+            if tmp_regexp.match(tmpf))
+    for tmpf in temp_folders:
+        
         
     
     

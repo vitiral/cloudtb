@@ -25,7 +25,8 @@
 #    THE SOFTWARE.
 #    
 #    http://opensource.org/licenses/MIT
-import sys
+
+import sys, os
 import traceback
 
 class NeedModule(ImportError):
@@ -39,3 +40,18 @@ class ModuleError(Exception):
     pass
 class RequestError(Exception):
     pass
+
+def get_prev_exception_str():
+    '''Only prints out the actual exception if you pass in E. Otherwise just
+    gives you the line information'''
+    exc_info = sys.exc_info()
+    E = exc_info[0]
+    Estr =  exc_info[1].message
+    tb = sys.exc_info()[2]
+    return ''.join(traceback.format_exception(E, Estr, tb))
+    
+try:
+    1/0
+except Exception as E:
+    print sys.exc_info()
+    print get_prev_exception_str()

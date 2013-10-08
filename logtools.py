@@ -114,20 +114,7 @@ def log_fatal_exception():
    previous_except_hook = sys.excepthook
    sys.excepthook = except_hook
 
-def get_prev_exception_str(E = None, tb = None):
-    '''#TODO: NOT USEABLE
-    convinience function for logging in the print output and such
-    It doesn't look like it does a whole lot of good at the moment though...'''
-    if E != None:
-        out = ['Exception [{0}] Occured:'.format(E)]
-    else:
-        out = ['Exception Occured:']
-    if tb == None:
-        tb = sys.exc_info()[2]
-    out += traceback.format_tb(tb)
-    if E != None:
-        out += ['Exception: ' + str(E)]
-    return '\n'.join(out)
+
 
 if __name__ == '__main__':
    log = getLogger(__name__, level = logging.DEBUG)
