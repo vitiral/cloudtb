@@ -27,9 +27,9 @@
 #    http://opensource.org/licenses/MIT
 
 import sys, os
-import shelve
-import cProfile, profile, pstats
-from threading import Thread
+import csv
+import StringIO
+import inspect
 
 
 '''
@@ -38,17 +38,6 @@ Some on useful modules not included:
     - the module tempfile with gettempdir
 
 '''
-
-
-def get_temp_file(no_thread = None):
-    '''An extremely simple call that returns a temp file. All things are
-    handled by the system module, which automatically cleans up after itself.
-    HOWEVER, the use of this function calls a thread that updates a file
-    timer every 30 seconds. If that is a problem, then you must handle this
-    thread yourself (otherwise external python processes may delete your
-    temp data!)
-    '''
-    pass
     
 def is_file_ext(path, ext):
     n, fext = os.path.splitext(path)
@@ -61,10 +50,12 @@ def import_path(fullpath, do_reload = False):
     path, filename = os.path.split(fullpath)
     filename, ext = os.path.splitext(filename)
     sys.path.insert(0, path)
-    module = __import__(filename)
-    if do_reload:
-        reload(module)
-    del sys.path[0]
+    try:
+        module = __import__(filename)
+        if do_reload:
+            reload(module)
+    finally:
+        del sys.path[0]
     return module
 
 def set_priority(pid=None,priority=1):
@@ -108,9 +99,9 @@ def win_run(program, *args, **kw):
     '''For running stuff on Windows. Used in spawn'''
     mode = kw.get("mode", os.P_WAIT)
     for path in os.environ["PATH"].split(os.pathsep):
-        file = os.path.join(path, program) + ".exe"
+        fpath = os.path.join(path, program) + ".exe"
         try:
-            return os.spawnv(mode, file, (file,) + args)
+            return os.spawnv(mode, fpath, (fpath,) + args)
         except os.error:
             pass
     raise os.error, "cannot find executable"
@@ -134,9 +125,9 @@ def spawn(program, *args):
     else:
         # got spawnv but no spawnp: go look for an executable
         for path in os.environ["PATH"].split(os.pathsep):
-             file = os.path.join(path, program) + exefile
+             fpath = os.path.join(path, program) + exefile
              try:
-                 return spawnv(os.P_WAIT, file, (file,) + args)
+                 return spawnv(os.P_WAIT, fpath, (fpath,) + args)
              except os.error:
                  pass
         raise IOError, "cannot find executable"
@@ -162,8 +153,6 @@ def safe_eval(eval_str, variable_dict = None):
 def get_user_directory():
     return os.environ['USERPROFILE']
 
-def get_temp_directory():
-    return tempfile.gettempdir()
 
 def std_strf_time():
     '''Gets a standard datetime string'''
@@ -171,28 +160,12 @@ def std_strf_time():
 
 ''' Copy Pasting functionality to-from python'''
 from external import pyperclip
-
-class Interact(Thread):
-    def __init__(self, local):
-        self.local = local
-        Thread.__init__(self)
-
-    def run(self):
-        code.interact(local = self.local)
-
-def interact(local):
-    '''opens a shell for local interaction. Honestly using pdb is better
-    in most cases.
-    DOES NOT play nicely with most GUI applications I've seen'''
-    th = Interact(local)
-    th.start()
-
 def user_copy_array(data):
     '''Puts a 2D array into the copy buffer, split by tabs'''
     #TODO make this work for either 1D or 2D arrays
     buf = StringIO.StringIO()
     writer = csv.writer(buf, 'excel-tab')
-    depth, data = itertools.find_depth(data)
+    depth, data = iteration.find_depth(data)
     if depth == 0:
         data = ((data,),)
     elif depth == 1:

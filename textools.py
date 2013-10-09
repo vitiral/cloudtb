@@ -30,11 +30,13 @@ import pdb
 import os
 import re, collections
 import iteration
+import StringIO
 
 from simple_classes import File, Folder
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
 
+import itertools
 
 def format_re_search(list_data):
     return ''.join([n if type(n) == str else repr(n) for n in list_data])
@@ -42,44 +44,98 @@ def format_re_search(list_data):
 def get_original_str(re_searched):
     return ''.join([str(n) for n in re_searched])
 
-def re_search_folders(regexp, file_path = None, base_folder = None, 
-                      recurse = True, max_len_searched = None):
+def get_matches(researched):
+    '''returns an iterator of only the matches from a re_search output'''
+    return (m for m in researched if type(m) != str)
+    
+class ReseachedInfo:
+    # reduces the re_search output to it's core important data
+    # mostly used for gui functions.
+    def __init__(self, researched, original_text):
+        self.matches = tuple((ReducedRegPart(m, original_text) 
+            for m in get_matches(researched)))
+
+def get_line(text, position, start = 0):
     '''
-    This is the workhorse of Regui.
-    Inputs:
-        regexp -- either text or compiled regexp
-        file_path -- if specified, only opens and analyzes a single file.
-        base_folder -- analyzes all files in the folder. If recurse == True,
-            calls itself for subsequent folders.
+    returns what line the position is on in the text between the start
+    and position'''
+    pos = start
+    find = text.find
+    line = 0
+    while pos != -1:
+        pos =  find('\n', pos) + 1
+        if pos > position:
+            return line
+        line += 1
+    if position > len(text):
+        raise IndexError("position is outside of bounds of text")
+    return line - 1
+    
+class ReducedRegPart:
+    def __init__(self, regpart, original_text, 
+                 last_line = 0, last_end = 0):
+        self.text = regpart.text
+        self.start = regpart.span[0]
+    
+    def update_line(self, original_text, last_line = 0,
+                    last_end = 0):
+        self.line = get_line(original_text, self.start, 
+                             start = last_end)
+        return self.start + len(self.text) # return end for next call.
         
-    Outputs:
-        - if file_path was specified, outputs the re_search results 
-            from that file (outputs list of strings and RegGroupParts)
-        - Otherwise it outputs a folder object who's self.files attributes
-            contains a list of Folder classes and File classes. Get the data
-            by calling File.get_data()
+def get_match_paths(folder_path, 
+                    file_regexp = None, text_regexp = None, 
+                    recurse = True, 
+                    max_len_searched = None,
+                    watchers = None):
+    '''get the file paths in a folder that have text which matches
+    the regular expression.
+    Watchers should be a list of watchers to be called on each new file name
     '''
-    if type(regexp) in (str, unicode):
-        regexp = re.compile(regexp)
-    
-    if file_path != None:
-        with open(file_path) as f:
-            return re_search(regexp, f.read(), stop = max_len_searched)
-    
-    if base_folder == None:
-        raise ValueError("Must specify either a file or a base folder")
-    
-    ftree = []
-    for f in os.listdir(base_folder):
-        path = os.path.join(base_folder)
+    if (file_regexp, text_regexp) == (None, None):
+        raise ValueError('Must specify at least one regex!')
+    if file_regexp != None:
+        if type(file_regexp) in (str, unicode):
+            file_regexp = re.compile(file_regexp)
+        file_fnd = file_regexp.finditer
+    if text_regexp != None:
+        if type(text_regexp) in (str, unicode):
+            text_regexp = re.compile(text_regexp)
+        text_fnd = text_regexp.finditer
         
+    folder_path = os.path.abspath(folder_path)
+    
+    fpaths = []
+    for fname in os.listdir(folder_path):
+        path = os.path.join(folder_path, fname)
+        if watchers:
+            [w(path) for w in watchers]
+
         if os.path.isdir(path):
-            ftree.append(re_search_folders)
+            fpaths.extend(get_match_paths(folder_path,
+                file_regexp, text_regexp, recurse, 
+                max_len_searched))
+
+        if file_regexp:
+            try:
+                next(file_fnd(fname))
+            except StopIteration:
+                continue
         
+        if text_regexp:
+            with open(path) as f:
+                #TODO: check if file is a text file
+                try:
+                    next(text_fnd(f.read(), 0, max_len_searched))
+                    fpaths.append(path)
+                except StopIteration:
+                    continue
+        else:
+            fpaths.append(path)
     
-    
-    
-def re_search(regexp, text, start = 0, end = None):
+    return fpaths
+        
+def re_search(regexp, text, start = 0, end = None, return_matches = False):
     '''Research your re!
     
     The same as re.search except returns a list of text and objects.
@@ -109,7 +165,10 @@ they're seen in this new light!"""
                                 with the coresponding group number (#).
     
     The actual output of the funcion is a list containing strings and
-    RegGroupPart objects of the searched text
+    RegGroupPart objects of the searched text.
+    
+    If return_matches is set to true, it returns a list of only the 
+    matches as the second variable -- data_list, matches
     
     For easier to read formating, use the GUI tool #TODO: name of gui tool
 '''
@@ -122,6 +181,7 @@ they're seen in this new light!"""
     if type(regexp) == str:    
         regexp = re.compile(regexp)
     data_list = []
+    matches_list = []
     match = 0
     prev_stop = stop
     while stop < absolute_end:
@@ -141,13 +201,17 @@ they're seen in this new light!"""
                                         match_data = (match, span, regexp))
         upd_val, null = new_RegGroupPart.update()
         assert(upd_val == len(groups))
+        matches_list.append(new_RegGroupPart)
         data_list.append(new_RegGroupPart)
         assert(get_original_str(data_list) == text[:stop])
         prev_stop = stop
         match += 1
     
     data_list.append(text[stop:])
-    return data_list
+    if return_matches:
+        return data_list, matches_list
+    else:
+        return data_list
 
 class RegGroupPart(object):
     def __init__(self, groups, index, match_data = None):
@@ -418,7 +482,7 @@ class SpellingCorrector(object):
                       [word])
         return max(candidates, key=self.NWORDS.get)
 
-if __name__ == '__main__':
+def dev_research():
     import dbe
     text = ("Researching my re search is really easy with this handy new tool! "
         "It shows me my matches and group number, I think it is great that  "
@@ -428,3 +492,12 @@ if __name__ == '__main__':
     print researched, '\n'
     print format_re_search(researched)
     pass
+
+if __name__ == '__main__':
+    text = '''I am writing this as a conerned person
+    I really want to know what line things are on!
+    what line is this?
+    and what line is that?
+    tell me!'''
+    print get_line(text, text.find('writing'))
+    
