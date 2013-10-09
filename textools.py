@@ -82,7 +82,7 @@ class ReducedRegPart:
         self.line = get_line(original_text, self.start, 
                              start = last_end)
         return self.start + len(self.text) # return end for next call.
-        
+
 def get_match_paths(folder_path, 
                     file_regexp = None, text_regexp = None, 
                     recurse = True, 
@@ -190,7 +190,14 @@ they're seen in this new light!"""
             if not data_list:   # no match found
                 return None
             break
+        group_0 = searched.group(0)
         groups = searched.groups()
+        se = searched
+        pdb.set_trace()
+        if group_0 != groups[0]:
+            # overriding a very annoying feature of the re module where somehow
+            # these can be different things
+            groups = (group_0,) + groups
         span = searched.span()
         start, stop = span
         
@@ -199,6 +206,7 @@ they're seen in this new light!"""
         index = iteration.first_index_ne(groups, None)
         new_RegGroupPart = RegGroupPart(groups, index, 
                                         match_data = (match, span, regexp))
+        
         upd_val, null = new_RegGroupPart.update()
         assert(upd_val == len(groups))
         matches_list.append(new_RegGroupPart)
@@ -212,7 +220,7 @@ they're seen in this new light!"""
         return data_list, matches_list
     else:
         return data_list
-
+    
 class RegGroupPart(object):
     def __init__(self, groups, index, match_data = None):
         ''' match_data = match_num, span (in outside tex), and regcmp 
@@ -235,8 +243,8 @@ class RegGroupPart(object):
         # recursive function. The index increments on each call to itself
         index = self.index + 1
         while index < len(groups):
-#            if self.text == 'this':
-#                pdb.set_trace()
+            if self.match_data:
+                pdb.set_trace()
             gtxt = groups[index]
             if gtxt == None:
                 index += 1
@@ -491,13 +499,10 @@ def dev_research():
     researched = re_search(regexp, text)
     print researched, '\n'
     print format_re_search(researched)
-    pass
+    print '\n', 'HTML', '\n'
+    from richtext import re_search_format_html
+    print re_search_format_html(researched)
 
 if __name__ == '__main__':
-    text = '''I am writing this as a conerned person
-    I really want to know what line things are on!
-    what line is this?
-    and what line is that?
-    tell me!'''
-    print get_line(text, text.find('writing'))
+    dev_research()
     

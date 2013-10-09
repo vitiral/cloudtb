@@ -5,6 +5,7 @@ This module contains general use tools in GUI's or displaying data
 
 '''
 
+from __future__ import division
 def get_color_from_index(index, max_index):
     '''
     Returns a good spread of bright and shiny colors quickly.
@@ -23,10 +24,10 @@ def get_color_from_index(index, max_index):
 #    They can be arrived at through simple iteration through this algorithm, or
 #    iteration plus jumping, or ... THIS CODE!
     
-    cindex = int(index / max_index * (6*256-70))
     highest = 256
+    cindex = int(index / max_index * (6*highest-70))
     cindex = cindex + 1
-    red, blue, green = 0
+    red, blue, green = (0,)*3
     
     if cindex <= highest:
         red = highest - 1

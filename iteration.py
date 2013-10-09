@@ -54,10 +54,10 @@ class biter(object):
         - append - appends another iterable onto the iterator.
         - insert - only accepts inserting at the 0 place, inserts an iterable
             before other iterables.
-        - adding.  an beteriter object can be added to another object that is
-            iterable.  i.e. beteriter + iter (not iter + beteriter).  It's best to make
-            all objects beteriter objects to avoid syntax errors.  :D
-        - getitem (beteriter[1:3:4] syntax) including slicing and
+        - adding.  an biter object can be added to another object that is
+            iterable.  i.e. biter + iter (not iter + biter).  It's best to make
+            all objects biter objects to avoid syntax errors.  :D
+        - getitem (biter[1:3:4] syntax) including slicing and
             looking up referencing
         - next - standard way to deal with iterators
 
@@ -85,20 +85,31 @@ class biter(object):
         
         
     Note: if you need to iterate directly, pull out the iter with
-        myiter = iter(beteriter)
+        myiter = iter(biter)
     this will use all c code and be super fast
     '''
     def __init__(self, iterable):
         self._iter = iter(iterable)
-        self.lookahead = lookahead
         self.solid_iter = None
 
-    def append(self, iterable):
+    def append(self, value):
+        self._iter = chain(self._iter, (value,))
+    
+    def insert(self, position, value):
+        if position not in (0, -1):
+            raise ValueError("can only insert in front or back")
+        if position == 0:
+            self._iter = chain((value,), self._iter)
+        elif position == -1:
+            self.append(value)
+        else:
+            assert(0)
+        
+    def extend(self, iterable):
         self._iter = chain(self._iter, iterable)
 
-    def insert(self, place, iterable):
-        if place != 0:
-            raise ValueError('Can only insert at index of 0')
+    def front_extend(self, iterable):
+        '''extends in front of the iterator'''
         self._iter = chain(iterable, self._iter)
 
     def __add__(self, iterable):
@@ -107,14 +118,17 @@ class biter(object):
 
     def __next__(self):
         return next(self._iter)
-
+        
+    def next(self):
+        return next(self._iter)
+        
     def __iter__(self):
-        return self._iter
+        return self
 
     def __getitem__(self, item):
         if type(item) == int:
             if item < 0:
-                raise IndexError('Cannot address beteriter with '
+                raise IndexError('Cannot address biter with '
                     'negative index: ' + repr(item))
             return next(islice(self._iter, item))
 
@@ -142,10 +156,10 @@ class soliditer(object):
     
     creates a "solid iterable" that has lookahead functionality,
     but advancing the index still deletes data.
-    Use the beteriter class if you have all iterators
+    Use the biter class if you have all iterators
     This function is intended to work with iterators as chunks,
     it is pure python (would like to write it in c soon) so it is
-    not as fast as beteriter.
+    not as fast as biter.
 
     Inputs:
         iterator, default_buf, request_extend_muliply, slicetype
@@ -352,7 +366,7 @@ class solidslice(object):
                 self.soliditer.consume(step)
         return out
 
-def isdone(iterator):
+def f(iterator):
     '''tells you whether the iterator is out if items without harming it.
     returns the new rebuilt iterable
     returns isdone, iterator'''
@@ -463,10 +477,10 @@ class brange(object):
 
 def flatten(iterable):
     '''flatten an iterator of any depth'''
-    iterable = beteriter(iterable)
+    iterable = biter(iterable)
     for e in iterable:
         if hasattr(e, '__iter__'):
-            iterable.insert(0, e)
+            iterable.front_extend(e)
         else:
             yield e
 
@@ -624,76 +638,81 @@ if _NUMPY_:
         return np.tile(data, (times, 1))
 
 '''
-    i2 = beteriter(range(10)) + beteriter(range(30))
-    print 'Testing i2 beteriter(range(10)) + beteriter(range(30))'
+    i2 = biter(range(10)) + biter(range(30))
+    print 'Testing i2 biter(range(10)) + biter(range(30))'
     print 'next', next(i2)
 
     print 'index 10 then 2', i2[10], i2[2]
     print 'reset'
-    i2 = beteriter(range(10)) + beteriter(range(30))
+    i2 = biter(range(10)) + biter(range(30))
     print 'slice [0:5:]', [n for n in i2[0:5:]]
 
     print 'reset and adding two with same slice'
-    i2 = beteriter(range(10)) + beteriter(range(30))
-    i3 = beteriter(range(10)) + beteriter(range(30))
+    i2 = biter(range(10)) + biter(range(30))
+    i3 = biter(range(10)) + biter(range(30))
     i2, i3 = i2[0:5:], i3[0:5:]
     print [n for n in (i2 + i3)]
     '''
 
 if __name__ == '__main__':
-    import dbe
+    pass
     import pdb
-
-    car = '>>>'
-
-    print('''
-    >>>
-    si = soliditer(iter(range(300)))
-    si.extend(range(1250, 1350))
-    si.extend(range(-200, 0))
-    si.insert(5, 'inserted')
-    si.append('appended')
-    >>>
-    ''')
-    si = soliditer(iter(range(300)))
-    si.extend(range(1250, 1350))
-    si.extend(range(-200, 0))
-    si.insert(5, 'inserted')
-    si.append('appended')
-
-    print (car, "si[10], si[5], si[105]")
-    print (si[10], si[5], si[105])
-    print(car, "list(si[0:20:3])")
-    print(list(si[0:20:3]))
-    print (car, "si[10], si[5], si[105]")
-    print (si[10], si[5], si[105])
-    print "note len data buffer:", len(si._databuf)
-    print "index of inserted", si.index('inserted')
-    print si.index('appended')
-    print 'consume a bunch of data', si.consume(500)
-    print 'print out everything'
-    print si[0:]
-    print 'and do some basic operations'
-    print "si[1], si[10], si.index('appended'), si.index(-58)"
-    print si[1], si[10], si.index('appended'), si.index(-58)
-
-    print '\n\nreseting'
-    si = soliditer(iter(range(300)))
-    si.extend(range(1250, 1350))
-    si.extend(range(-200, 0))
-    si.insert(5, 'inserted')
-    si.append('appended')
-
-    print 'iterizing'
-    it = si.iterize()
-    print 'overriding si._been_iterized for demonstration, otherwise this casues an Assertion Error'
-    si._been_iterized = False
-    print 'si[4]', si[4]
-    print 'Note how it stores only some data'
-    print 'si._databuf', si._databuf
-    print "list(it)"
-    print list(it)
-    print
-
-    print 'list(si) -- note bad idea they are not the same. Only the data was kept'
-    print (list(si))
+    pdb.set_trace()
+    mylist = [range(10), [range(20), range(15)]]
+    print tuple(flatten(mylist))
+#    import dbe
+#    import pdb
+#
+#    car = '>>>'
+#
+#    print('''
+#    >>>
+#    si = soliditer(iter(range(300)))
+#    si.extend(range(1250, 1350))
+#    si.extend(range(-200, 0))
+#    si.insert(5, 'inserted')
+#    si.append('appended')
+#    >>>
+#    ''')
+#    si = soliditer(iter(range(300)))
+#    si.extend(range(1250, 1350))
+#    si.extend(range(-200, 0))
+#    si.insert(5, 'inserted')
+#    si.append('appended')
+#
+#    print (car, "si[10], si[5], si[105]")
+#    print (si[10], si[5], si[105])
+#    print(car, "list(si[0:20:3])")
+#    print(list(si[0:20:3]))
+#    print (car, "si[10], si[5], si[105]")
+#    print (si[10], si[5], si[105])
+#    print "note len data buffer:", len(si._databuf)
+#    print "index of inserted", si.index('inserted')
+#    print si.index('appended')
+#    print 'consume a bunch of data', si.consume(500)
+#    print 'print out everything'
+#    print si[0:]
+#    print 'and do some basic operations'
+#    print "si[1], si[10], si.index('appended'), si.index(-58)"
+#    print si[1], si[10], si.index('appended'), si.index(-58)
+#
+#    print '\n\nreseting'
+#    si = soliditer(iter(range(300)))
+#    si.extend(range(1250, 1350))
+#    si.extend(range(-200, 0))
+#    si.insert(5, 'inserted')
+#    si.append('appended')
+#
+#    print 'iterizing'
+#    it = si.iterize()
+#    print 'overriding si._been_iterized for demonstration, otherwise this casues an Assertion Error'
+#    si._been_iterized = False
+#    print 'si[4]', si[4]
+#    print 'Note how it stores only some data'
+#    print 'si._databuf', si._databuf
+#    print "list(it)"
+#    print list(it)
+#    print
+#
+#    print 'list(si) -- note bad idea they are not the same. Only the data was kept'
+#    print (list(si))
