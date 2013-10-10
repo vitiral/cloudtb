@@ -47,13 +47,6 @@ def get_original_str(re_searched):
 def get_matches(researched):
     '''returns an iterator of only the matches from a re_search output'''
     return (m for m in researched if type(m) != str)
-    
-class ReseachedInfo:
-    # reduces the re_search output to it's core important data
-    # mostly used for gui functions.
-    def __init__(self, researched, original_text):
-        self.matches = tuple((ReducedRegPart(m, original_text) 
-            for m in get_matches(researched)))
 
 def get_line(text, position, start = 0):
     '''
@@ -70,18 +63,6 @@ def get_line(text, position, start = 0):
     if position > len(text):
         raise IndexError("position is outside of bounds of text")
     return line - 1
-    
-class ReducedRegPart:
-    def __init__(self, regpart, original_text, 
-                 last_line = 0, last_end = 0):
-        self.text = regpart.text
-        self.start = regpart.span[0]
-    
-    def update_line(self, original_text, last_line = 0,
-                    last_end = 0):
-        self.line = get_line(original_text, self.start, 
-                             start = last_end)
-        return self.start + len(self.text) # return end for next call.
 
 def get_match_paths(folder_path, 
                     file_regexp = None, text_regexp = None, 
@@ -134,7 +115,7 @@ def get_match_paths(folder_path,
             fpaths.append(path)
     
     return fpaths
-        
+
 def re_search(regexp, text, start = 0, end = None, return_matches = False):
     '''Research your re!
     
@@ -237,7 +218,14 @@ class RegGroupPart(object):
         self.text = groups[index]
 #        self.match_start = match_start
         self.match_data = match_data
+        if match_data:
+            self.replace_str = None
         self.data_list = None
+    
+    def do_replace(self, replace_str):
+        '''Mostly for use with compressions'''
+        self.replace_str = replace_str
+        return self
     
     def init(self, text, regs):
         '''
@@ -262,18 +250,19 @@ class RegGroupPart(object):
 #            if self.indexes[0] == 0:
 #                pdb.set_trace()
             reg = regs[index]
-            cur_start, cur_end = reg
-            if cur_start < 0:
+            check_start, check_end = reg
+            if check_start < 0:
                 index += 1
                 continue
             if reg == myreg:
                 self.indexes.append(index)
                 index += 1
                 continue
-            if cur_start >= myend and cur_end > myend:
+            if check_start >= myend and check_end > myend:
                 break
-            # append text that isn't part of a match
-            assert(cur_start >= mystart and cur_end <= myend)
+            assert(check_start >= mystart and check_end <= myend)
+            cur_start, cur_end = check_start, check_end
+            
             if not prev_end > cur_start and prev_end != cur_start:
                 data_list.append(text[prev_end:cur_start])
             
@@ -286,69 +275,33 @@ class RegGroupPart(object):
         if not data_list:
             data_list.append(text[mystart:myend])
         else:
-            end = reg[0]
-            if  end != myend:
-                data_list.append(text[end:myend])
+            if cur_end != myend:
+                data_list.append(text[cur_end:myend])
         self.reg = myreg
         self.data_list = data_list
         return len(data_list)
-    
-#    def update(self):
-#        '''Goes through it's own text and figures out if there
-#        are any groups inside of itself. Returns the index + 1 of the
-#        last group it finds'''
-#        assert(not self.is_updated)
-#        text, groups = self.text, self.groups
-#        data_list = []
-#        end_i = 0
-#        # recursive function. The index increments on each call to itself
-#        index = self.index + 1
-#        while index < len(groups):
-#            if self.match_data:
-#                pdb.set_trace()
-#            gtxt = groups[index]
-#            if gtxt == None:
-#                index += 1
-#                continue
-#            begin_i = text.find(gtxt, end_i) #+1 if end_i != 0 else 0)
-#            if begin_i == -1:
-#                assert(end_i == 0)
-#                assert(len(data_list) == 0)
-#                if text == '.':
-#                    pdb.set_trace()
-#                data_list = [text]
-#                end_i = len(text)
-#                break
-#            data_list.append(text[end_i:begin_i]) # append raw text in between
-#            end_i = begin_i
-#            new_RegGroupPart = RegGroupPart(groups, index)
-#            index, end_i_obj = new_RegGroupPart.update()
-#            end_i += end_i_obj
-#            data_list.append(new_RegGroupPart)
-#        else:   # loop ended on it's own, cleanup.
-#            if not data_list:   # you never even entered the loop
-#                data_list = [text]
-#            else:# need to add final bits of text.
-#                data_list.append(text[end_i:])
-#            end_i = len(text)   # all text processed
-#            
-#        self.is_updated = True
-#        self.data_list = [n for n in data_list if n != '']
-#        assert(get_original_str(self.data_list) == self.text)
-#        return index, end_i
-    
+   
     def __repr__(self):
         start, end = '', ''
         if self.match_data != None:
             match = self.match_data[0]
             start = '<*m{0}>[['.format(match)
             end = r']]'
+            replace = self.replace
+            if replace:
+                end += r'==>[[{0}]]'.format(replace)
         str_data = ''.join([n if type(n) == str else repr(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
 
     def __str__(self):
         return self.text
-
+    
+    def group(self, index):
+        '''Function so that RegPart can interface with things that use 
+        regexp match objects. IMPORTANT: cannot interface the same way with
+        the "groups" call'''
+        return self.groups[index]
+        
 def re_in(txt, rcmp_iter):
     _len = len(txt)
     return bool([ri for ri in rcmp_iter if ri.match(txt, 0, _len)])
@@ -506,6 +459,25 @@ def system_replace_regexp(path, regexp, replace):
         print 'not replacing file\n'
     
     print '################################'    
+
+def re_search_replace(researched, repl, preview = False):
+    '''Given the results from re_search, replace text.
+    If repl is a function, then it is called given the groups data
+    if preview = True then it retuns a data_list with the 
+    RegPart objects who's .replace_str member has been updated.
+    
+    format functions that handle re_searched data will format this visually
+    
+    returns an iterator with the replacements. If you just want text, 
+    just call ''.join(output)
+    '''
+    if type(repl) in (str, unicode):
+        if preview == False:
+            return (n if type(n) in (str, unicode) else repl for n in researched)
+        else:
+            return (n if type(n) in (str, unicode) else n.do_replace(repl)
+                for n in researched)
+    raise NotImplemented()
     
 def dev_research():
     import dbe
@@ -522,9 +494,15 @@ def dev_research():
     
     import sys
     researched = re_search(regexp, text)
-    print format_re_search(researched)
+#    print format_re_search(researched)
 #    print '\n', 'HTML', '\n'
-#    from richtext import re_search_format_html
+    
+    get_repl = re_search_replace(researched, 'HELLO', preview = True)
+    
+    repl = list(get_repl)
+    pdb.set_trace()
+    print ''.join(get_repl)
+    from extra.richtext import re_search_format_html
 #    print re_search_format_html(researched)
 
 if __name__ == '__main__':

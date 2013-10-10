@@ -7,9 +7,11 @@ Created on Tue Oct  8 21:33:45 2013
 
 range = xrange
 
+
+
+# when someone can tell me a better way of doing this, please let me know
 from guitools import get_color_from_index
 import iteration
-
 
 header = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 '''"http://www.w3.org/TR/REC-html40/strict.dtd"><html><head>'''

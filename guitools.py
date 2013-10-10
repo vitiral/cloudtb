@@ -23,14 +23,14 @@ def get_color_from_index(index, max_index, highest = 180):
 #    DOWN GREEN (ENDS AT HIGH RED)
 #    
 #    or, to put into code, there are 6 * 256 possibilities 
-#    (although I'd end at green == 70 to keep the last color orange so 6*256 - 70)
+#    (although I'd end at green == 70 to keep the last color orange so 5*256 - 70)
 #    They can be arrived at through simple iteration through this algorithm, or
 #    iteration plus jumping, or ... THIS CODE!
     if highest > 256:
         raise ValueError('highest: ' + str(highest))
     reserve = (70*highest/256)
     assert(reserve > 0)
-    cindex = int((float(index) / (max_index + 1)) * (6*highest-reserve))
+    cindex = int((float(index) / (max_index + 1)) * (5*highest-reserve))
     cindex = cindex + 1
     red, blue, green = (0,)*3
     
