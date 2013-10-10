@@ -4,14 +4,15 @@ Created on Tue Oct  8 21:33:45 2013
 
 @author: user
 """
-
 range = xrange
 
+import pdb
 
 
 # when someone can tell me a better way of doing this, please let me know
-from guitools import get_color_from_index
+from guitools import get_color_from_index, get_color_str
 import iteration
+import textools
 
 header = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 '''"http://www.w3.org/TR/REC-html40/strict.dtd"><html><head>'''
@@ -42,8 +43,8 @@ def get_span(underlined = '', bold = '', color = '',
     if underlined:
         underlined = underlined_tplate
     if color:
-        color = hex(color)[2:] if type(color) not in (str, unicode) else color
-        color = '0'*(6-len(color)) + color
+        if type(color) != str:
+            color = get_color_str(color = color)
         color = color_tplate.format(color = color)
     if lower:
         lower = lower_tplate
@@ -72,34 +73,56 @@ def text_format_html(text, span):
     
     return start + ''.join(text) + end
 
-def regpart_format_html(regpart):
+def regpart_format_html(regpart, show_tags_on_replace = False):
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
+    if regpart.match_data:
+        replace = regpart.replace_str
+        if replace:
+            repl_color = get_color_str(0,0,0)
+            std_color = get_color_str(255, 0, 0)
+        else:
+            std_color = get_color_str(0,0,0)
+    else:
+        replace = None
+        std_color = get_color_str(0,0,0)
     
     colors = [get_color_from_index(i, len(groups)) for i in indexes]
     formatted = []
     
     # front formatting
-    if match_data != None:
+    if (match_data != None and 
+            (show_tags_on_replace == True or replace == None)):
         span = get_span(bold = True, underlined = True, lower = True)
         match = match_data[0]
         formatted.append(text_format_html('{0}:'.format(match), span))
 
-    for i in range(len(indexes)):
-        formatted.append(text_format_html('(', get_span(bold = True, 
-            color = colors[i])))
+    if show_tags_on_replace == True or replace == None:
+        for i in range(len(indexes)):
+            formatted.append(text_format_html('(', get_span(bold = True, 
+                color = colors[i])))
+    if replace:
+        formatted.append(text_format_html(
+            regpart.text, get_span(bold = True, color = std_color)))
+    else:
+        for data in data_list:
+            if type(data) == str:
+                formatted.append(text_format_html(data, get_span(bold = True,
+                                                        color = std_color)))
+            else:
+                formatted.extend(regpart_format_html(data))
     
-    for data in data_list:
-        if type(data) == str:
-            formatted.append(text_format_html(data, get_span(bold = True)))
-        else:
-            formatted.extend(regpart_format_html(data))
-        
-    for i in range(len(indexes)):
-        formatted.append(text_format_html(')', get_span(bold = True, 
-                         color = colors[i])))
-        formatted.append(text_format_html('{0}'.format(indexes[i]),
-                         get_span(bold = True, color = colors[i], lower = True)))
+    if show_tags_on_replace == True or replace == None:
+        for i in range(len(indexes)):
+            formatted.append(text_format_html(')', get_span(bold = True, 
+                             color = colors[i])))
+            formatted.append(text_format_html('{0}'.format(indexes[i]),
+                             get_span(bold = True, color = colors[i], lower = True)))
+    
+    if replace:
+        formatted.append(text_format_html(replace,
+            get_span(bold = True, color = repl_color,
+                     underlined = True)))
     
     return formatted
 
@@ -113,16 +136,20 @@ def re_search_format_html(data_list):
     formatted.append(footer)
     return ''.join(iteration.flatten(formatted))
 
-if __name__ == '__main__':
+def dev1():
     import dbe
     import pdb
-    from textools import re_search, format_re_search
+    from textools import re_search, format_re_search, re_search_replace
     text = '''talking about expecting the Spanish Inquisition in the text below: 
     Chapman: I didn't expect a kind of Spanish Inquisition. 
     (JARRING CHORD - the cardinals burst in) 
     Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
     '''
     regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
+    repl = r'What is this, the Spanish Inquisition?'
     researched = re_search(regexp, text)
+#    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)
     print re_search_format_html(researched)
+#    print re_search_format_html(replaced)
+

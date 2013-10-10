@@ -49,10 +49,21 @@ def get_color_from_index(index, max_index, highest = 180):
     else:
         assert(0)
     
-    assert(0 <= red <= 255 and 0 <= green <= 255 and 0 <= blue <= 255)
     
+    
+    return get_color(red, green, blue)
+
+def get_color(red, green, blue):
+    if not 0 <= red <= 255 and 0 <= green <= 255 and 0 <= blue <= 255:
+        raise ValueError("a value is above 255 or less than 0: " 
+            + str((red, green, blue)))
     return (red << 16) + (green << 8) + (blue)
 
+def get_color_str(red = None, green = None, blue = None, color = None):
+    if not color:
+        color = get_color(red, green, blue)
+    color = hex(color)[2:]
+    return '0'*(6 - len(color)) + color
 
 '''Some fun general text tools'''
 class SpellingCorrector(object):

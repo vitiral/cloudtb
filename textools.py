@@ -38,11 +38,24 @@ CMP_TYPE = type(re.compile(''))
 
 import itertools
 
-def format_re_search(list_data):
-    return ''.join([n if type(n) == str else repr(n) for n in list_data])
+def format_re_search(list_data, pretty = False):
+    '''If pretty == True then each item starts on it's own line with a '>>| '
+    at the front'''
+    strings = (str(n) for n in list_data)
+    if pretty:
+        return '\n>>|'.join(strings)
+    else:
+        return ''.join(strings)
 
-def get_original_str(re_searched):
-    return ''.join([str(n) for n in re_searched])
+def get_orig_researched(re_searched):
+    return ''.join((n if type(n) == str else n.text for n in re_searched))
+
+def get_str_researched(re_searched):
+    '''returns the origional string if replace has not been called,
+    else returns the replacement string'''
+    strings = (n if type(n) == str else n.text if not n.replace_str \
+        else n.replace_str for n in re_searched)
+    return ''.join(strings)
 
 def get_matches(researched):
     '''returns an iterator of only the matches from a re_search output'''
@@ -196,11 +209,12 @@ they're seen in this new light!"""
         new_RegGroupPart.init(text, regs)
         matches_list.append(new_RegGroupPart)
         data_list.append(new_RegGroupPart)
-        assert(get_original_str(data_list) == text[:stop])
+        assert(get_orig_researched(data_list) == text[:stop])
         prev_stop = stop
         match += 1
     
     data_list.append(text[stop:])
+    data_list = tuple((n for n in data_list if n != ''))
     if return_matches:
         return data_list, matches_list
     else:
@@ -209,16 +223,20 @@ they're seen in this new light!"""
 class RegGroupPart(object):
     def __init__(self, groups, index, match_data = None):
         '''
-        - groups is all re.group(n)   NOTE: NOT re.search.groups()
+        - groups is all re.group(n)   NOTE: NOT re.search.groups(). See 
+            re_search for more information
         - index is the current group index
-        - match_data is only given if this is the whole match
+        - match_data is None unless this is this is the top level match
+            match_data = (match_number, span, regexp)
+                (group(0))
+                - if match_data != None, there is also the text and replace_str
+                    attributes.
         '''
         self.groups = groups
         self.indexes = [index]
-        self.text = groups[index]
-#        self.match_start = match_start
         self.match_data = match_data
         if match_data:
+            self.text = groups[index]
             self.replace_str = None
         self.data_list = None
     
@@ -287,14 +305,14 @@ class RegGroupPart(object):
             match = self.match_data[0]
             start = '<*m{0}>[['.format(match)
             end = r']]'
-            replace = self.replace
+            replace = self.replace_str
             if replace:
                 end += r'==>[[{0}]]'.format(replace)
         str_data = ''.join([n if type(n) == str else repr(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
 
     def __str__(self):
-        return self.text
+        return repr(self)
     
     def group(self, index):
         '''Function so that RegPart can interface with things that use 
@@ -461,7 +479,11 @@ def system_replace_regexp(path, regexp, replace):
     print '################################'    
 
 def re_search_replace(researched, repl, preview = False):
-    '''Given the results from re_search, replace text.
+    '''
+    NOTE: This function may affect the original data!!! All it does is add
+        data to the .replace_str values, but this will change the string and
+        formatting outputs.
+    Given the results from re_search, replace text.
     If repl is a function, then it is called given the groups data
     if preview = True then it retuns a data_list with the 
     RegPart objects who's .replace_str member has been updated.
@@ -475,8 +497,15 @@ def re_search_replace(researched, repl, preview = False):
         if preview == False:
             return (n if type(n) in (str, unicode) else repl for n in researched)
         else:
-            return (n if type(n) in (str, unicode) else n.do_replace(repl)
-                for n in researched)
+            data = []
+            for n in researched:
+                if type(n) in (str, unicode):
+                    data.append(n)
+                else:
+                    data.append(n.do_replace(repl))
+            return data
+#            return (n if type(n) in (str, unicode) else n.do_replace(repl)
+#                for n in researched)
     raise NotImplemented()
     
 def dev_research():
@@ -500,11 +529,15 @@ def dev_research():
     get_repl = re_search_replace(researched, 'HELLO', preview = True)
     
     repl = list(get_repl)
-    pdb.set_trace()
-    print ''.join(get_repl)
+    print format_re_search(repl, pretty = True)
+    print get_str_researched(repl)
     from extra.richtext import re_search_format_html
-#    print re_search_format_html(researched)
+    print re_search_format_html(repl)
+
+def dev_richtext():
+    from extra.richtext import dev1
+    dev1()
 
 if __name__ == '__main__':
-    dev_research()
+    dev_richtext()
     
