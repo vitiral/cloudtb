@@ -7,12 +7,28 @@ Created on Tue Oct  8 21:33:45 2013
 range = xrange
 
 import pdb
+import os, sys
+import re
 
 
-# when someone can tell me a better way of doing this, please let me know
 from guitools import get_color_from_index, get_color_str
-import iteration
-import textools
+
+try:
+    from .. import iteration, textools
+except ValueError:
+    import iteration, textools
+
+'''replace list going from regular text to html'''
+html_replace_list = [
+[r'<'    ,r'&lt;'],
+[r'>'    ,r'&gt;'],
+[r'\&'   ,r'&amp;'],
+[r'"'    , r'&quot'],
+['\n'    , r'<\p><p>'], # develper must handle first and last '\n' characters 
+                        #when subbing!
+]
+html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
+    for n in html_replace_list]
 
 header = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 '''"http://www.w3.org/TR/REC-html40/strict.dtd"><html><head>'''
@@ -36,6 +52,8 @@ underlined_tplate = ''' text-decoration: underline;'''
 color_tplate = ''' color:#{color};'''
 lower_tplate = ''' vertical-align:sub;'''
 
+CMP_NEWLINE = re.compile('\n')
+
 def get_span(underlined = '', bold = '', color = '',
                     lower = ''):
     if bold:
@@ -51,29 +69,114 @@ def get_span(underlined = '', bold = '', color = '',
     return (span_template[0].format(bold = bold, underlined = underlined, 
               color = color, lower = lower), span_template[1])
 
-def text_format_html(text, span):
+def get_html_converted_and_subfun(text):
+    repl_or_re, repl_re = textools.get_rcmp_list(html_replace_list)
+    replace_fun = textools.subfun(replace_list = repl_re)
+    converted_text = repl_or_re.sub(replace_fun, text)
+    return replace_fun, converted_text
+    
+def text_format_html_find_true_position(text, true_position):
+    '''May look a bit confusing but this function is doing alot. It:
+        replaces text
+        adds the replacement lengths until it gets above true pos
+        finds the actual pos and updates the true_position input
+    '''
+    class StopAdding(Exception):
+        pass
+    
+    def add_plain_html(add_plain, add_html):
+        '''returns True when true position reached'''
+        target, plain, html = true_position
+        plain += add_plain
+        if plain > target:
+            raise StopAdding
+        add_html += add_html
+        true_position[1] = plain
+        true_position[2] = html
+    
+    if len(true_position) == 1:
+        true_position.extend((0,0))
+            
+    converted_text = None
+    try:
+        end = ''
+        if text[-1] == '\n':
+            end = ''.join(paragraph[::-1])
+            text = text[:-1]
+            add_end = True
+        start = ''
+        if text[0] == '\n':
+            start = ''.join(paragraph[::-1])
+            text = text[1:]
+            aplain, ahtml = 1, len(start)
+            add_plain_html(aplain, ahtml)
+        
+        converted_text, replace_fun  = get_html_converted_and_subfun(text)
+        
+        subbed_regs = replace_fun.regs
+        prev_reg = 0,0
+        for i, subbed in replace_fun.subbed:
+            reg = subbed_regs[i]
+            # we now have what was replaced (subbed[0]), what replaced it
+            # (subbed[1]) and can easily get the text before it from the
+            # coordinates (reg and prev_reg). We are trying to count plain 
+            # until it is == find_position, then set the counted html to 
+            # that variable. The process automatically br
+         
+            # first add the preceeding text
+            toadd = reg[0] - prev_reg[1]       
+            aplain, ahtml = toadd, toadd 
+            add_plain_html(aplain, ahtml)
+            
+            # now add own text
+            aplain, ahtml = len(subbed[0]), len(subbed[1])
+            add_plain_html(aplain, ahtml)
+            
+            prev_reg = reg
+        
+        if add_end:
+            aplain, ahtml = 1, len(end)
+            add_plain_html(aplain, ahtml)
+            
+    except StopAdding:
+        if converted_text == None:
+            converted_text = get_html_converted_and_subfun(text)[0]
+        # find actual cursor with aplain and ahtml
+        get_true_pos, prev_plain_pos, prev_html_pos = true_position
+        if aplain == ahtml:
+            # StopAdding occured while adding standard text
+            attempted_pos_html = prev_html_pos + ahtml
+            set_true_pos = attempted_pos_html - (get_true_pos - prev_plain_pos)
+        elif ahtml > aplain:
+            # StopAdding occured inside of html, choose position before.
+            set_true_pos = prev_html_pos
+        else:
+            assert(pdb.set_trace())
+        
+    assert(0 <= set_true_pos < len(converted_text))
+    true_position.pop()
+    true_position[1] = set_true_pos
+    return converted_text
+    
+def text_format_html(text, span, true_position = None):
     '''formats raw text in html with the given span.
     mostly created to properly handle new lines'''
     if not text:
         return ''
-    start = ''
-    if text[0] == '\n':
-        start = ''.join(paragraph[::-1])
-        text = text[1:]
-    end = ''
-    if text[-1] == '\n':
-        end = ''.join(paragraph[::-1])
-        text = text[:-1]
+    class StopAdding(Exception):
+        pass
     
-    text = text.split('\n')
-    fmat_front = [paragraph[0], span[0]]
-    fmat_back = [span[1], paragraph[1]]
-    text = (fmat_front + [t] + fmat_back for t in text)
-    text = tuple((iteration.flatten(text)))[1:-1]
+    if true_position and len(true_position != 2):
+        # len == 2 indicates it is done
+        converted_text = text_format_html_find_true_position(text, 
+                                                             true_position)
+    else:
+        converted_text = get_html_converted_and_subfun(text)[0]
     
-    return start + ''.join(text) + end
+    return converted_text
 
-def regpart_format_html(regpart, show_tags_on_replace = False):
+def regpart_format_html(regpart, show_tags_on_replace = False, 
+                        true_position = None):
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
     if regpart.match_data:
@@ -99,8 +202,7 @@ def regpart_format_html(regpart, show_tags_on_replace = False):
 
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
-            formatted.append(text_format_html('(', get_span(bold = True, 
-                color = colors[i])))
+            formatted.append(text_format_html('(', get_span(bold = True)))
     if replace:
         formatted.append(text_format_html(
             regpart.text, get_span(bold = True, color = std_color)))
@@ -108,9 +210,11 @@ def regpart_format_html(regpart, show_tags_on_replace = False):
         for data in data_list:
             if type(data) == str:
                 formatted.append(text_format_html(data, get_span(bold = True,
-                                                        color = std_color)))
+                                color = std_color), 
+                                true_position = true_position))
             else:
-                formatted.extend(regpart_format_html(data))
+                formatted.extend(regpart_format_html(data),
+                                 true_position = true_position)
     
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
@@ -126,30 +230,23 @@ def regpart_format_html(regpart, show_tags_on_replace = False):
     
     return formatted
 
-def re_search_format_html(data_list):
+def re_search_format_html(data_list, true_position = None):
+    '''true_position can be an array that contains a single integer. This
+    function will keep track of the character lengths of raw (unformated)
+    text and append the position in html code where len(raw_text) == 
+    true_position onto true_position'''
     formatted = [header]
     for data in data_list:
         if type(data) == str:
-            formatted.append(text_format_html(data, span_std))
+            formatted.append(text_format_html(data, span_std, 
+                true_position = true_position))
         else:
-            formatted.append(regpart_format_html(data))
+            formatted.append(regpart_format_html(data,
+                    true_position = true_position))
     formatted.append(footer)
     return ''.join(iteration.flatten(formatted))
 
-def dev1():
-    import dbe
-    import pdb
-    from textools import re_search, format_re_search, re_search_replace
-    text = '''talking about expecting the Spanish Inquisition in the text below: 
-    Chapman: I didn't expect a kind of Spanish Inquisition. 
-    (JARRING CHORD - the cardinals burst in) 
-    Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
-    '''
-    regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
-    repl = r'What is this, the Spanish Inquisition?'
-    researched = re_search(regexp, text)
-#    replaced = re_search_replace(researched, repl, preview = True)
-#    print format_re_search(researched)
-    print re_search_format_html(researched)
-#    print re_search_format_html(replaced)
+
+def get_true_position(html):
+    pass
 

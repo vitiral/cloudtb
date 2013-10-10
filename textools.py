@@ -325,6 +325,8 @@ def re_in(txt, rcmp_iter):
     return bool([ri for ri in rcmp_iter if ri.match(txt, 0, _len)])
 
 def ensure_parenthesis(reg_exp):
+    if type(reg_exp) != str:
+        reg_exp = reg_exp.pattern
     if reg_exp == '':
         return reg_exp
     if reg_exp[0] != '(' or reg_exp[-1] != ')':
@@ -349,7 +351,10 @@ def replace_first(txt, rcmp_list, replacements):
 def get_rcmp_list(replacement_list):
     '''given a list of [[regex_str, replace_with], ...]
     returns the values ored together and the list to be 
-    used with replace_first'''
+    used with replace_first
+    
+    returns repl_or_re (call the .sub method directly) 
+    and repl_re to be used with subfun'''
     repl = replacement_list
     # format all subs to be in groups
     repl = [(ensure_parenthesis(n[0]), n[1]) for n in repl]
@@ -375,37 +380,49 @@ def replace_text_with_list(replacement_list, text):
     than this though, as the first value can be a regular expression, so you
     could use 'a*' to replace all repetative a's, while simultaniously only
     replacing one b.'''
-    repl_or_re, relace_re = get_rcmp_list(replacement_list)
-    subfun = subfun(replacement_list = replacement_list)
-    return repl_or_re.sub(subfun, text)
+    repl_or_re, replace_re = get_rcmp_list(replacement_list)
+    mysubfun = subfun(replace_list = replace_re)
+    return repl_or_re.sub(mysubfun, text)
     
 def group_num(tup):
     '''returns group number of returned re from findall that is not == ""
     returns only first instance found.'''
     return next((n for n in tup if n != ''))
 
-def convert_to_regexp(txt):
+def convert_to_regexp(txt, compile = False):
     '''converts text into a regexp, handling any special characters'''
     special_chars = r'. ^ $ * + ? { } [ ] \ | ( )'
     special = special_chars.split(' ')
     special_or = '(\\' + ')|(\\'.join(special) +')'
     sfun = subfun(match_set = set(special), prepend = '\\')
-    return re.sub(special_or, sfun, txt)
+    out = re.sub(special_or, sfun, txt)
+    if compile:
+        return re.compile(out)
+    return out
 
 class subfun(object):
     '''General use for use with re.sub. Instead of subsituting text it prepends
     or postpends text onto it and returns it whole. It also stores the text
     it is replacing 
-    Input: subfun([replace, [match_set, [prepend, [postpend]]])
-        replace == text you want to replace match with
-        match_set == if None, prepends / postpends to all text. If a set
+    Input:
+        replace 
+            text you want to replace match with
+        prepend 
+            text you want to prepend -- only does so if it is in the match set
+        postpend 
+            text you want to postpend -- only does so if it is in the match set
+        match_set
+            if None, prepends / postpends to all text. If a set
             only replaces text that is in this match set
-        prepend == text you want to prepend -- only does so if it is in the match set
-        postpend == text you want to postpend -- only does so if it is in the match set
-    
+        replace_list
+            a list of [[regexp, replacement], ...] The first item that matches
+            regexp will be replaed with replacement
+            
     stores subbed text in:
         self.subbed
         in the form (text, sub)
+    stores subbed regs (the start_pos, end_pos of subbed text) in:
+        self.regs
         
         sfun = subfun(match_set, subtext, prepend, postpend)
         subbed_text = re.sub(pattern, sfun, text)
@@ -418,6 +435,7 @@ class subfun(object):
         self.match_set = match_set
         self.replace_list = replace_list
         self.subbed = []
+        self.regs = []
         
     def __call__(self, matchobj):
         if matchobj:
@@ -434,6 +452,7 @@ class subfun(object):
             if self.match_set == None or txt in self.match_set:
                 txt = self.prepend + txt + self.postpend
             self.subbed.append((start_txt, txt))
+            self.regs.append(matchobj.regs[0])
             return txt
 
 def system_replace_regexp(path, regexp, replace):
@@ -535,9 +554,28 @@ def dev_research():
     print re_search_format_html(repl)
 
 def dev_richtext():
-    from extra.richtext import dev1
-    dev1()
+    import dbe
+    import pdb
+    from extra.richtext import re_search_format_html
+    convert_to_regexp('^^^** hello **')
+    text = '''talking about expecting the Spanish Inquisition in the text below: 
+    Chapman: I didn't expect a kind of Spanish Inquisition. 
+    (JARRING CHORD - the cardinals burst in) 
+    Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
+    '''
+    regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
+    repl = r'What is this, the Spanish Inquisition?'
+    researched = re_search(regexp, text)
+#    replaced = re_search_replace(researched, repl, preview = True)
+#    print format_re_search(researched)
+    print re_search_format_html(researched)
+#    print re_search_format_html(replaced)
 
 if __name__ == '__main__':
     dev_richtext()
+#    pass
+#    text = 'hello there bob'
+#    replace_list = [['hello', 'bye'],['bob', 'joe']]
+#    print text, '::', replace_text_with_list(replace_list, text)
+
     

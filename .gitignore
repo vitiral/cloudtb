@@ -1,4 +1,7 @@
-*.pyc
-*~
-.spyderproject
-.ropeproject
+*
+!*.py
+!*.txt
+!*.tex
+!*.ui
+!extra/
+!external/
