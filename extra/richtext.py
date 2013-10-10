@@ -85,7 +85,16 @@ def add_plain_html(true_position, add_plain, add_html):
     html += add_html
     true_position[1] = plain
     true_position[2] = html
-        
+
+class TextRegPart(object):
+    '''object to differentiate between standard text and html data for 
+    RegParts'''
+    def __init__(self, text, true_text):
+        '''true_text is the base (non - decorative) text of RegPart
+        objects'''
+        self.text = text
+        self.true_text = true_text
+    
 def handle_stop_adding(true_position, converted_text, text, aplain, ahtml):
     if converted_text == None:
         converted_text = get_html_converted_and_subfun(text)[0]
