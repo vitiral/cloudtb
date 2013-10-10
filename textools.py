@@ -566,8 +566,6 @@ def dev_richtext():
     researched = re_search(regexp, text)
     print text[10:30]
     true_position = [10]
-#    pdb.set_trace()
-#    pdb.set_trace()
     out =  re_search_format_html(researched, true_position = true_position)
     print out[true_position[1]:true_position[1] + 50]
 #    replaced = re_search_replace(researched, repl, preview = True)
