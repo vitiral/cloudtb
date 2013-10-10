@@ -7,9 +7,7 @@ Created on Tue Oct  8 21:33:45 2013
 range = xrange
 
 import pdb
-import os, sys
 import re
-
 
 from guitools import get_color_from_index, get_color_str
 
@@ -18,7 +16,7 @@ try:
 except ValueError:
     import iteration, textools
 
-'''replace list going from regular text to html'''
+# replace list going from regular text to html
 html_replace_list = [
 [r'<'    ,r'&lt;'],
 [r'>'    ,r'&gt;'],
@@ -43,7 +41,7 @@ paragraph = ('''<p style=" margin-top:0px; margin-bottom:0px; '''
 '''margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'''
 , '''</p>''')
 
-span_std = ('', '')
+html_span_std = ('', '')
 
 span_template = ('''<span style="{bold}{underlined}{color}'''
 '''{lower}">''', '''</span>''')
@@ -54,7 +52,7 @@ lower_tplate = ''' vertical-align:sub;'''
 
 CMP_NEWLINE = re.compile('\n')
 
-def get_span(underlined = '', bold = '', color = '',
+def get_html_span_tags(underlined = '', bold = '', color = '',
                     lower = ''):
     if bold:
         bold = bold_tplate
@@ -73,7 +71,7 @@ def get_html_converted_and_subfun(text):
     repl_or_re, repl_re = textools.get_rcmp_list(html_replace_list)
     replace_fun = textools.subfun(replace_list = repl_re)
     converted_text = repl_or_re.sub(replace_fun, text)
-    return replace_fun, converted_text
+    return converted_text, replace_fun
     
 def text_format_html_find_true_position(text, true_position):
     '''May look a bit confusing but this function is doing alot. It:
@@ -94,9 +92,9 @@ def text_format_html_find_true_position(text, true_position):
         true_position[1] = plain
         true_position[2] = html
     
-    if len(true_position) == 1:
-        true_position.extend((0,0))
-            
+    assert(len(true_position) != 1)
+    
+    set_true_pos = None
     converted_text = None
     try:
         end = ''
@@ -115,7 +113,8 @@ def text_format_html_find_true_position(text, true_position):
         
         subbed_regs = replace_fun.regs
         prev_reg = 0,0
-        for i, subbed in replace_fun.subbed:
+#        pdb.set_trace()
+        for i, subbed in enumerate(replace_fun.subbed):
             reg = subbed_regs[i]
             # we now have what was replaced (subbed[0]), what replaced it
             # (subbed[1]) and can easily get the text before it from the
@@ -133,9 +132,14 @@ def text_format_html_find_true_position(text, true_position):
             add_plain_html(aplain, ahtml)
             
             prev_reg = reg
+        else:
+            # never entered loop! No special characters = no subbed!
+            assert(converted_text == text)
+            aplain, ahtml = (len(text),) * 2
+            add_plain_html(aplain, ahtml)
         
-        if add_end:
-            aplain, ahtml = 1, len(end)
+        if end:
+            aplain, ahtml = 1, len(add_end)
             add_plain_html(aplain, ahtml)
             
     except StopAdding:
@@ -152,28 +156,28 @@ def text_format_html_find_true_position(text, true_position):
             set_true_pos = prev_html_pos
         else:
             assert(pdb.set_trace())
-        
-    assert(0 <= set_true_pos < len(converted_text))
-    true_position.pop()
-    true_position[1] = set_true_pos
+    
+    if set_true_pos:
+        assert(len(true_position) == 3)
+        true_position.pop()
+        true_position[1] = set_true_pos
     return converted_text
     
-def text_format_html(text, span, true_position = None):
-    '''formats raw text in html with the given span.
+def text_format_html(text, html_span_tags, true_position = None):
+    '''formats raw text into html with the given html_span_tags.
     mostly created to properly handle new lines'''
     if not text:
         return ''
-    class StopAdding(Exception):
-        pass
     
-    if true_position and len(true_position != 2):
+    if true_position and len(true_position) != 2:
         # len == 2 indicates it is done
         converted_text = text_format_html_find_true_position(text, 
                                                              true_position)
     else:
         converted_text = get_html_converted_and_subfun(text)[0]
     
-    return converted_text
+    tag_st, tag_end = html_span_tags
+    return tag_st + converted_text + tag_end
 
 def regpart_format_html(regpart, show_tags_on_replace = False, 
                         true_position = None):
@@ -196,36 +200,37 @@ def regpart_format_html(regpart, show_tags_on_replace = False,
     # front formatting
     if (match_data != None and 
             (show_tags_on_replace == True or replace == None)):
-        span = get_span(bold = True, underlined = True, lower = True)
+        html_span_tags = get_html_span_tags(bold = True, underlined = True, lower = True)
         match = match_data[0]
-        formatted.append(text_format_html('{0}:'.format(match), span))
+        formatted.append(text_format_html('{0}:'.format(match), html_span_tags))
 
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
-            formatted.append(text_format_html('(', get_span(bold = True)))
+            formatted.append(text_format_html('(', get_html_span_tags(
+                bold = True, color = colors[i])))
     if replace:
         formatted.append(text_format_html(
-            regpart.text, get_span(bold = True, color = std_color)))
+            regpart.text, get_html_span_tags(bold = True, color = std_color)))
     else:
         for data in data_list:
             if type(data) == str:
-                formatted.append(text_format_html(data, get_span(bold = True,
+                formatted.append(text_format_html(data, get_html_span_tags(bold = True,
                                 color = std_color), 
                                 true_position = true_position))
             else:
-                formatted.extend(regpart_format_html(data),
-                                 true_position = true_position)
+                formatted.extend(regpart_format_html(data,
+                                 true_position = true_position))
     
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
-            formatted.append(text_format_html(')', get_span(bold = True, 
+            formatted.append(text_format_html(')', get_html_span_tags(bold = True, 
                              color = colors[i])))
             formatted.append(text_format_html('{0}'.format(indexes[i]),
-                             get_span(bold = True, color = colors[i], lower = True)))
+                             get_html_span_tags(bold = True, color = colors[i], lower = True)))
     
     if replace:
         formatted.append(text_format_html(replace,
-            get_span(bold = True, color = repl_color,
+            get_html_span_tags(bold = True, color = repl_color,
                      underlined = True)))
     
     return formatted
@@ -236,17 +241,25 @@ def re_search_format_html(data_list, true_position = None):
     text and append the position in html code where len(raw_text) == 
     true_position onto true_position'''
     formatted = [header]
+    if true_position:
+        typeerror = TypeError("True position must be a list "
+                    "with an int as first item")
+        if type(true_position) != list:
+            raise typeerror
+        if len(true_position) != 1:
+            raise ValueError("True position can only be a single item list")
+        if type(true_position[0]) != int:
+            raise typeerror
+            
+        # set up true position as needed_position, plain_text_pos, html_pos
+        true_position.extend((0, len(header)))
     for data in data_list:
         if type(data) == str:
-            formatted.append(text_format_html(data, span_std, 
+            formatted.append(text_format_html(data, html_span_std, 
                 true_position = true_position))
         else:
             formatted.append(regpart_format_html(data,
                     true_position = true_position))
     formatted.append(footer)
     return ''.join(iteration.flatten(formatted))
-
-
-def get_true_position(html):
-    pass
 

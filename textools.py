@@ -28,15 +28,11 @@
 
 import pdb
 import os
-import re, collections
+import re
 import iteration
-import StringIO
 
-from simple_classes import File, Folder
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
-
-import itertools
 
 def format_re_search(list_data, pretty = False):
     '''If pretty == True then each item starts on it's own line with a '>>| '
@@ -250,15 +246,16 @@ class RegGroupPart(object):
         - text is the outside text
         - regs is a view of the regs starting at itself. it is NOT
             the output of re.search.regs (has to be fixed for this object)
+        
+        This works by going through the reg tuple and pulling out the strings
+        that are relevant to it's own group -- the ones that fall within it's own
+        start and end points
+        It then stores them as new objects, and stores the text in between as well
         '''
         groups = self.groups
         index = self.indexes[0]
         myreg = regs[index]
         mystart, myend = myreg
-        ''' This works by going through the reg tuple and pulling out the strings
-        that are relevant to it's own group -- the ones that fall within it's own
-        start and end points
-        It then stores them as new objects, and stores the text in between as well'''
         data_list = []
         index += 1
         len_regs = len(regs)
@@ -525,7 +522,7 @@ def re_search_replace(researched, repl, preview = False):
             return data
 #            return (n if type(n) in (str, unicode) else n.do_replace(repl)
 #                for n in researched)
-    raise NotImplemented()
+    raise NotImplementedError()
     
 def dev_research():
     import dbe
@@ -557,6 +554,7 @@ def dev_richtext():
     import dbe
     import pdb
     from extra.richtext import re_search_format_html
+    global out, text, true_position
     convert_to_regexp('^^^** hello **')
     text = '''talking about expecting the Spanish Inquisition in the text below: 
     Chapman: I didn't expect a kind of Spanish Inquisition. 
@@ -566,9 +564,15 @@ def dev_richtext():
     regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
     repl = r'What is this, the Spanish Inquisition?'
     researched = re_search(regexp, text)
+    print text[10:30]
+    true_position = [10]
+#    pdb.set_trace()
+    pdb.set_trace()
+    out =  re_search_format_html(researched, true_position = true_position)
+    print out[true_position[1]:true_position[1] + 50]
 #    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)
-    print re_search_format_html(researched)
+    
 #    print re_search_format_html(replaced)
 
 if __name__ == '__main__':

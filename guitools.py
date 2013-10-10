@@ -48,9 +48,7 @@ def get_color_from_index(index, max_index, highest = 180):
         blue = highest - (cindex - highest * 3)
     else:
         assert(0)
-    
-    
-    
+
     return get_color(red, green, blue)
 
 def get_color(red, green, blue):
