@@ -73,27 +73,50 @@ def get_html_converted_and_subfun(text):
     converted_text = repl_or_re.sub(replace_fun, text)
     return converted_text, replace_fun
     
+
+class StopAdding(Exception):
+    pass
+    
+def add_plain_html(true_position, add_plain, add_html):
+    '''returns True when true position reached'''
+    target, plain, html = true_position
+    plain += add_plain
+    if plain > target:
+        raise StopAdding
+    add_html += add_html
+    true_position[1] = plain
+    true_position[2] = html
+        
+def handle_stop_adding(true_position, converted_text, text, aplain, ahtml):
+    if converted_text == None:
+        converted_text = get_html_converted_and_subfun(text)[0]
+    # find actual cursor with aplain and ahtml
+    get_true_pos, prev_plain_pos, prev_html_pos = true_position
+    if aplain == ahtml:
+        # StopAdding occured while adding standard text
+        attempted_pos_html = prev_html_pos + ahtml
+        set_true_pos = attempted_pos_html - (get_true_pos - prev_plain_pos)
+    elif ahtml > aplain:
+        # StopAdding occured inside of html, choose position before.
+        set_true_pos = prev_html_pos
+    else:
+        assert(pdb.set_trace())
+    
+    if set_true_pos:
+        assert(len(true_position) == 3)
+        true_position.pop()
+        true_position[1] = set_true_pos
+        
+    return converted_text
+    
 def text_format_html_find_true_position(text, true_position):
     '''May look a bit confusing but this function is doing alot. It:
         replaces text
         adds the replacement lengths until it gets above true pos
         finds the actual pos and updates the true_position input
     '''
-    class StopAdding(Exception):
-        pass
-    
-    def add_plain_html(add_plain, add_html):
-        '''returns True when true position reached'''
-        target, plain, html = true_position
-        plain += add_plain
-        if plain > target:
-            raise StopAdding
-        add_html += add_html
-        true_position[1] = plain
-        true_position[2] = html
-    
     assert(len(true_position) != 1)
-    
+    tpos = true_position
     set_true_pos = None
     converted_text = None
     try:
@@ -107,13 +130,12 @@ def text_format_html_find_true_position(text, true_position):
             start = ''.join(paragraph[::-1])
             text = text[1:]
             aplain, ahtml = 1, len(start)
-            add_plain_html(aplain, ahtml)
+            add_plain_html(tpos, aplain, ahtml)
         
         converted_text, replace_fun  = get_html_converted_and_subfun(text)
         
         subbed_regs = replace_fun.regs
         prev_reg = 0,0
-#        pdb.set_trace()
         for i, subbed in enumerate(replace_fun.subbed):
             reg = subbed_regs[i]
             # we now have what was replaced (subbed[0]), what replaced it
@@ -125,45 +147,30 @@ def text_format_html_find_true_position(text, true_position):
             # first add the preceeding text
             toadd = reg[0] - prev_reg[1]       
             aplain, ahtml = toadd, toadd 
-            add_plain_html(aplain, ahtml)
+            add_plain_html(tpos, aplain, ahtml)
             
             # now add own text
             aplain, ahtml = len(subbed[0]), len(subbed[1])
-            add_plain_html(aplain, ahtml)
+            add_plain_html(tpos, aplain, ahtml)
             
             prev_reg = reg
         else:
             # never entered loop! No special characters = no subbed!
             assert(converted_text == text)
             aplain, ahtml = (len(text),) * 2
-            add_plain_html(aplain, ahtml)
+            add_plain_html(tpos, aplain, ahtml)
         
         if end:
             aplain, ahtml = 1, len(add_end)
-            add_plain_html(aplain, ahtml)
+            add_plain_html(tpos, aplain, ahtml)
             
     except StopAdding:
-        if converted_text == None:
-            converted_text = get_html_converted_and_subfun(text)[0]
-        # find actual cursor with aplain and ahtml
-        get_true_pos, prev_plain_pos, prev_html_pos = true_position
-        if aplain == ahtml:
-            # StopAdding occured while adding standard text
-            attempted_pos_html = prev_html_pos + ahtml
-            set_true_pos = attempted_pos_html - (get_true_pos - prev_plain_pos)
-        elif ahtml > aplain:
-            # StopAdding occured inside of html, choose position before.
-            set_true_pos = prev_html_pos
-        else:
-            assert(pdb.set_trace())
+        converted_text =  handle_stop_adding(tpos, converted_text, text, 
+                                             aplain, ahtml)
     
-    if set_true_pos:
-        assert(len(true_position) == 3)
-        true_position.pop()
-        true_position[1] = set_true_pos
     return converted_text
     
-def text_format_html(text, html_span_tags, true_position = None):
+def text_format_html(text, html_span_tags, true_position):
     '''formats raw text into html with the given html_span_tags.
     mostly created to properly handle new lines'''
     if not text:
@@ -179,8 +186,21 @@ def text_format_html(text, html_span_tags, true_position = None):
     tag_st, tag_end = html_span_tags
     return tag_st + converted_text + tag_end
 
-def regpart_format_html(regpart, show_tags_on_replace = False, 
-                        true_position = None):
+def append_html(formatted, html, true_position):
+    '''Needs to be used when appending any data to formatted EXCEPT data
+    generated by text_format_html'''
+    try:
+        if true_position and len(true_position) != 2:
+            # len == 2 indicates it is done
+            aplain, ahtml = 0, len(html)
+        else:
+            formatted.append(html)
+            return
+    except StopAdding:
+        handle_stop_adding(true_position, html, None, aplain, ahtml)
+    formatted.append(html)
+
+def regpart_format_html(regpart, true_position, show_tags_on_replace = False):
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
     if regpart.match_data:
@@ -202,36 +222,40 @@ def regpart_format_html(regpart, show_tags_on_replace = False,
             (show_tags_on_replace == True or replace == None)):
         html_span_tags = get_html_span_tags(bold = True, underlined = True, lower = True)
         match = match_data[0]
-        formatted.append(text_format_html('{0}:'.format(match), html_span_tags))
+        formatted.append(text_format_html('{0}:'.format(match), html_span_tags,
+                                          true_position))
 
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
             formatted.append(text_format_html('(', get_html_span_tags(
-                bold = True, color = colors[i])))
+                bold = True, color = colors[i]),
+                true_position))
     if replace:
         formatted.append(text_format_html(
-            regpart.text, get_html_span_tags(bold = True, color = std_color)))
+            regpart.text, get_html_span_tags(bold = True, color = std_color),
+                                             true_position))
     else:
         for data in data_list:
             if type(data) == str:
                 formatted.append(text_format_html(data, get_html_span_tags(bold = True,
                                 color = std_color), 
-                                true_position = true_position))
+                                true_position))
             else:
                 formatted.extend(regpart_format_html(data,
-                                 true_position = true_position))
+                                 true_position))
     
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
             formatted.append(text_format_html(')', get_html_span_tags(bold = True, 
-                             color = colors[i])))
+                             color = colors[i]), true_position))
             formatted.append(text_format_html('{0}'.format(indexes[i]),
-                             get_html_span_tags(bold = True, color = colors[i], lower = True)))
+                             get_html_span_tags(bold = True, color = colors[i], 
+                                                lower = True), true_position))
     
     if replace:
         formatted.append(text_format_html(replace,
             get_html_span_tags(bold = True, color = repl_color,
-                     underlined = True)))
+                     underlined = True), true_position))
     
     return formatted
 
@@ -258,8 +282,9 @@ def re_search_format_html(data_list, true_position = None):
             formatted.append(text_format_html(data, html_span_std, 
                 true_position = true_position))
         else:
-            formatted.append(regpart_format_html(data,
-                    true_position = true_position))
+            formatted.extend(regpart_format_html(data, true_position))
+#            formatted.append(regpart_format_html(data,
+#                    true_position = true_position))
     formatted.append(footer)
-    return ''.join(iteration.flatten(formatted))
+    return ''.join(formatted)
 
