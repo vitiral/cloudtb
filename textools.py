@@ -14,7 +14,7 @@
 #    furnished to do so, subject to the following conditions:
 #    
 #    The above copyright notice and this permission notice shall be included in
-#    all copies or substantial portions of the Software.
+#    all copies or substantial portions of the Softwainre.
 #    
 #    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -190,14 +190,15 @@ they're seen in this new light!"""
             if not data_list:   # no match found
                 return None
             break
-        group_0 = searched.group(0)
-        groups = searched.groups()
-        se = searched
-        pdb.set_trace()
-        if group_0 != groups[0]:
-            # overriding a very annoying feature of the re module where somehow
-            # these can be different things
-            groups = (group_0,) + groups
+        regs = searched.regs
+        # overriding a very annoying feature of the re module where somehow
+        # these can be different things depending on how the match turns out
+#        if searched.lastindex != len(groups):
+#            groups = (searched.group(0),) + groups
+        get_group = searched.group        
+        groups = tuple((get_group(i) for i in xrange(searched.lastindex + 1)))
+            
+        assert(len(regs) == len(groups))
         span = searched.span()
         start, stop = span
         
@@ -206,9 +207,8 @@ they're seen in this new light!"""
         index = iteration.first_index_ne(groups, None)
         new_RegGroupPart = RegGroupPart(groups, index, 
                                         match_data = (match, span, regexp))
-        
-        upd_val, null = new_RegGroupPart.update()
-        assert(upd_val == len(groups))
+        upd_val = new_RegGroupPart.init(text, regs)
+#        assert(upd_val == len(groups))
         matches_list.append(new_RegGroupPart)
         data_list.append(new_RegGroupPart)
         assert(get_original_str(data_list) == text[:stop])
@@ -223,58 +223,115 @@ they're seen in this new light!"""
     
 class RegGroupPart(object):
     def __init__(self, groups, index, match_data = None):
-        ''' match_data = match_num, span (in outside tex), and regcmp 
-        it only exists for the outside match (not internal groups)'''
+        '''
+        - groups is all re.group(n)   NOTE: NOT re.search.groups()
+        - index is the current group index
+        - match_data is only given if this is the whole match
+        '''
         self.groups = groups
-        self.index = index
+        self.indexes = [index]
         self.text = groups[index]
-        self.data_list = None
+#        self.match_start = match_start
         self.match_data = match_data
-        self.is_updated = False
+        self.data_list = None
     
-    def update(self):
-        '''Goes through it's own text and figures out if there
-        are any groups inside of itself. Returns the index + 1 of the
-        last group it finds'''
-        assert(not self.is_updated)
-        text, groups = self.text, self.groups
+    def init(self, text, regs):
+        '''
+        - text is the outside text
+        - regs is a view of the regs starting at itself. it is NOT
+            the output of re.search.regs (has to be fixed for this object)
+        '''
+        groups = self.groups
+        index = self.indexes[0]
+        myreg = regs[index]
+        mystart, myend = myreg
+        ''' This works by going through the reg tuple and pulling out the strings
+        that are relevant to it's own group -- the ones that fall within it's own
+        start and end points
+        It then stores them as new objects, and stores the text in between as well'''
         data_list = []
-        end_i = 0
-        # recursive function. The index increments on each call to itself
-        index = self.index + 1
-        while index < len(groups):
-            if self.match_data:
-                pdb.set_trace()
-            gtxt = groups[index]
-            if gtxt == None:
+        index += 1
+        len_regs = len(regs)
+#        pdb.set_trace
+        prev_end = mystart
+        while index < len_regs:
+#            if self.indexes[0] == 0:
+#                pdb.set_trace()
+            reg = regs[index]
+            cur_start, cur_end = reg
+            if cur_start < 0:
                 index += 1
                 continue
-            begin_i = text.find(gtxt, end_i) #+1 if end_i != 0 else 0)
-            if begin_i == -1:
-                assert(end_i == 0)
-                assert(len(data_list) == 0)
-                if text == '.':
-                    pdb.set_trace()
-                data_list = [text]
-                end_i = len(text)
+            if reg == myreg:
+                self.indexes.append(index)
+                index += 1
+                continue
+            if cur_start >= myend and cur_end > myend:
                 break
-            data_list.append(text[end_i:begin_i]) # append raw text in between
-            end_i = begin_i
-            new_RegGroupPart = RegGroupPart(groups, index)
-            index, end_i_obj = new_RegGroupPart.update()
-            end_i += end_i_obj
-            data_list.append(new_RegGroupPart)
-        else:   # loop ended on it's own, cleanup.
-            if not data_list:   # you never even entered the loop
-                data_list = [text]
-            else:# need to add final bits of text.
-                data_list.append(text[end_i:])
-            end_i = len(text)   # all text processed
+            # append text that isn't part of a match
+            assert(cur_start >= mystart and cur_end <= myend)
+            if not prev_end > cur_start and prev_end != cur_start:
+                data_list.append(text[prev_end:cur_start])
             
-        self.is_updated = True
-        self.data_list = [n for n in data_list if n != '']
-        assert(get_original_str(self.data_list) == self.text)
-        return index, end_i
+            newregpart = RegGroupPart(groups, index)
+            converted = newregpart.init(text, regs)
+            data_list.append(newregpart)
+            index += converted
+            prev_end = regs[index-1][1]
+            
+        if not data_list:
+            data_list.append(text[mystart:myend])
+        else:
+            end = reg[0]
+            if  end != myend:
+                data_list.append(text[end:myend])
+        self.reg = myreg
+        self.data_list = data_list
+        return len(data_list)
+    
+#    def update(self):
+#        '''Goes through it's own text and figures out if there
+#        are any groups inside of itself. Returns the index + 1 of the
+#        last group it finds'''
+#        assert(not self.is_updated)
+#        text, groups = self.text, self.groups
+#        data_list = []
+#        end_i = 0
+#        # recursive function. The index increments on each call to itself
+#        index = self.index + 1
+#        while index < len(groups):
+#            if self.match_data:
+#                pdb.set_trace()
+#            gtxt = groups[index]
+#            if gtxt == None:
+#                index += 1
+#                continue
+#            begin_i = text.find(gtxt, end_i) #+1 if end_i != 0 else 0)
+#            if begin_i == -1:
+#                assert(end_i == 0)
+#                assert(len(data_list) == 0)
+#                if text == '.':
+#                    pdb.set_trace()
+#                data_list = [text]
+#                end_i = len(text)
+#                break
+#            data_list.append(text[end_i:begin_i]) # append raw text in between
+#            end_i = begin_i
+#            new_RegGroupPart = RegGroupPart(groups, index)
+#            index, end_i_obj = new_RegGroupPart.update()
+#            end_i += end_i_obj
+#            data_list.append(new_RegGroupPart)
+#        else:   # loop ended on it's own, cleanup.
+#            if not data_list:   # you never even entered the loop
+#                data_list = [text]
+#            else:# need to add final bits of text.
+#                data_list.append(text[end_i:])
+#            end_i = len(text)   # all text processed
+#            
+#        self.is_updated = True
+#        self.data_list = [n for n in data_list if n != '']
+#        assert(get_original_str(self.data_list) == self.text)
+#        return index, end_i
     
     def __repr__(self):
         start, end = '', ''
@@ -282,8 +339,8 @@ class RegGroupPart(object):
             match = self.match_data[0]
             start = '<*m{0}>[['.format(match)
             end = r']]'
-        str_data = ''.join([str(n) for n in self.data_list])
-        return start + '{{{0}}}<g{1}>'.format(str_data, self.index) + end
+        str_data = ''.join([n if type(n) == str else repr(n) for n in self.data_list])
+        return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
 
     def __str__(self):
         return self.text
@@ -446,59 +503,24 @@ def system_replace_regexp(path, regexp, replace):
     
     print '################################'    
     
-'''Some fun general text tools'''
-class SpellingCorrector(object):
-    '''A very simple spelling corrector, used in GUIs to check user input.'''
-    def __init__(self, all_words):
-        if type(all_words) in (tuple, list, set):
-            nw = [n.lower() for n in all_words]
-            nw.sort()
-            self.NWORDS = nw
-        else:
-            self.NWORDS = self.words(all_words)
-        self.NWORDS = self.train(self.NWORDS)
-
-    def words(self, text):
-        ''' returns a list of words'''
-        return re.findall('[a-z]+', text.lower())
-
-    def train(self, features):
-        model = collections.defaultdict(lambda: 1)
-        for f in features:
-            model[f] += 1
-        return model
-
-    def edits1(self, word):
-       splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
-       deletes    = [a + b[1:] for a, b in splits if b]
-       transposes = [a + b[1] + b[0] + b[2:] for a, b in splits if len(b)>1]
-       replaces   = [a + c + b[1:] for a, b in splits for c in alphabet if b]
-       inserts    = [a + c + b     for a, b in splits for c in alphabet]
-       return set(deletes + transposes + replaces + inserts)
-
-    def known_edits2(self, word):
-        return set(e2 for e1 in self.edits1(word)
-                   for e2 in self.edits1(e1) if e2
-                   in self.NWORDS)
-
-    def known(self, words): return set(w for w in words if w in self.NWORDS)
-
-    def correct(self, word):
-        candidates = (self.known([word]) or
-                      self.known(self.edits1(word)) or
-                      self.known_edits2(word) or
-                      [word])
-        return max(candidates, key=self.NWORDS.get)
-
 def dev_research():
     import dbe
-    text = ("Researching my re search is really easy with this handy new tool! "
-        "It shows me my matches and group number, I think it is great that  "
-        "they're seen in this new light!")
-    regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
+#    text = ("""Researching my re search is really easy with this handy new tool!
+# It shows me my matches and group number, I think it is great that
+# they're seen in this new light!""")
+#    regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
+    text = '''talking about expecting the Spanish Inquisition in the text below: 
+    Chapman: I didn't expect a kind of Spanish Inquisition. 
+    (JARRING CHORD - the cardinals burst in) 
+    Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
+    '''
+    regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
+    
+    import sys
     researched = re_search(regexp, text)
-    print researched, '\n'
-    print format_re_search(researched)
+#    print researched, '\n'
+#    pdb.set_trace()
+#    print format_re_search(researched)
     print '\n', 'HTML', '\n'
     from richtext import re_search_format_html
     print re_search_format_html(researched)

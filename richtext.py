@@ -5,6 +5,8 @@ Created on Tue Oct  8 21:33:45 2013
 @author: user
 """
 
+range = xrange
+
 from guitools import get_color_from_index
 import iteration
 
@@ -38,7 +40,8 @@ def get_span(underlined = '', bold = '', color = '',
     if underlined:
         underlined = underlined_tplate
     if color:
-        color = hex(color) if type(color) not in (str, unicode) else color
+        color = hex(color)[2:] if type(color) not in (str, unicode) else color
+        color = '0'*(6-len(color)) + color
         color = color_tplate.format(color = color)
     if lower:
         lower = lower_tplate
@@ -68,10 +71,10 @@ def text_format_html(text, span):
     return start + ''.join(text) + end
 
 def regpart_format_html(regpart):
-    data_list, index, groups, match_data = (regpart.data_list, regpart.index,
+    data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
     
-    color = get_color_from_index(index, len(groups))
+    colors = [get_color_from_index(i, len(groups)) for i in indexes]
     formatted = []
     
     # front formatting
@@ -80,18 +83,21 @@ def regpart_format_html(regpart):
         match = match_data[0]
         formatted.append(text_format_html('{0}:'.format(match), span))
 
-    formatted.append(text_format_html('(', get_span(bold = True, 
-        color = color)))
+    for i in range(len(indexes)):
+        formatted.append(text_format_html('(', get_span(bold = True, 
+            color = colors[i])))
     
     for data in data_list:
         if type(data) == str:
             formatted.append(text_format_html(data, get_span(bold = True)))
         else:
             formatted.extend(regpart_format_html(data))
-    formatted.append(text_format_html(')', get_span(bold = True, 
-                     color = color)))
-    formatted.append(text_format_html('{0}'.format(index),
-                     get_span(bold = True, color = color, lower = True)))
+        
+    for i in range(len(indexes)):
+        formatted.append(text_format_html(')', get_span(bold = True, 
+                         color = colors[i])))
+        formatted.append(text_format_html('{0}'.format(indexes[i]),
+                         get_span(bold = True, color = colors[i], lower = True)))
     
     return formatted
 
@@ -114,10 +120,7 @@ if __name__ == '__main__':
     (JARRING CHORD - the cardinals burst in) 
     Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
     '''
-    
-    
     regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
     researched = re_search(regexp, text)
-    print format_re_search(researched)
-    print '\n', 'HTML', '\n'
+#    print format_re_search(researched)
     print re_search_format_html(researched)
