@@ -195,10 +195,15 @@ they're seen in this new light!"""
         # these can be different things depending on how the match turns out
 #        if searched.lastindex != len(groups):
 #            groups = (searched.group(0),) + groups
-        get_group = searched.group        
-        groups = tuple((get_group(i) for i in xrange(searched.lastindex + 1)))
-            
-        assert(len(regs) == len(groups))
+        get_group = searched.group
+        
+        # yup, with the re module this is the ONLY good way to get
+        # every group item. groups() doesn't return it, 
+        # last_index truncates with None Values... NOTHING is any good.
+        # Comming to this solution was WAY more work than it should have
+        # been. The re.search function has to be MASSIVELY re-worked.
+        groups = tuple((get_group(i) for i in range(len(regs))))
+        
         span = searched.span()
         start, stop = span
         
@@ -207,8 +212,7 @@ they're seen in this new light!"""
         index = iteration.first_index_ne(groups, None)
         new_RegGroupPart = RegGroupPart(groups, index, 
                                         match_data = (match, span, regexp))
-        upd_val = new_RegGroupPart.init(text, regs)
-#        assert(upd_val == len(groups))
+        new_RegGroupPart.init(text, regs)
         matches_list.append(new_RegGroupPart)
         data_list.append(new_RegGroupPart)
         assert(get_original_str(data_list) == text[:stop])
@@ -505,25 +509,23 @@ def system_replace_regexp(path, regexp, replace):
     
 def dev_research():
     import dbe
-#    text = ("""Researching my re search is really easy with this handy new tool!
-# It shows me my matches and group number, I think it is great that
-# they're seen in this new light!""")
-#    regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
-    text = '''talking about expecting the Spanish Inquisition in the text below: 
-    Chapman: I didn't expect a kind of Spanish Inquisition. 
-    (JARRING CHORD - the cardinals burst in) 
-    Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
-    '''
-    regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
+    text = ("""Researching my re search is really easy with this handy new tool!
+ It shows me my matches and group number, I think it is great that
+ they're seen in this new light!""")
+    regexp = r'((R|r)e ?se\w*)|(((T|t)h)?is)'
+#    text = '''talking about expecting the Spanish Inquisition in the text below: 
+#    Chapman: I didn't expect a kind of Spanish Inquisition. 
+#    (JARRING CHORD - the cardinals burst in) 
+#    Ximinez: NOBODY expects the Spanish Inquisition! Our chief weapon is surprise...surprise and fear...fear and surprise.... Our two weapons are fear and surprise...and ruthless efficiency.... Our *three* weapons are fear, surprise, and ruthless efficiency...and an almost fanatical devotion to the Pope.... Our *four*...no... *Amongst* our weapons.... Amongst our weaponry...are such elements as fear, surprise.... I'll come in again. (Exit and exeunt) 
+#    '''
+#    regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
     
     import sys
     researched = re_search(regexp, text)
-#    print researched, '\n'
-#    pdb.set_trace()
-#    print format_re_search(researched)
-    print '\n', 'HTML', '\n'
-    from richtext import re_search_format_html
-    print re_search_format_html(researched)
+    print format_re_search(researched)
+#    print '\n', 'HTML', '\n'
+#    from richtext import re_search_format_html
+#    print re_search_format_html(researched)
 
 if __name__ == '__main__':
     dev_research()
