@@ -26,26 +26,44 @@ def re_search_format_html(data_list, show_tags_on_replace = False):
 def str_html_formatted(html_list):
     return ''.join((str(n) for n in html_list))
 
-def get_html_position(html_list, position):
-    html_pos, text_pos = 0, 0
+def get_position(html_list, text_position = None, html_position = None):
+    '''given either a text position or html position, return the other
+    position
+    So if you give the html_position, you will recieve the text_position
+    '''
+    # TODO: make it do an average for selecting decorator elements.
+    if None not in (text_position, html_position):
+        raise ValueError("Can only find one position at at ime")
+    cur_html_pos, cur_text_pos = 0, 0
     prev_hpos, prev_tpos = 0, 0
     for textrp in html_list:
-        html_pos += len(textrp.html_text)
-        text_pos += len(textrp.true_text)
-        if text_pos > position:
+        cur_html_pos += len(textrp.html_text)
+        cur_text_pos+= len(textrp.true_text)
+        if text_position != None and cur_text_pos> text_position:
             break
-        prev_hpos, prev_tpos = html_pos, text_pos
+        elif html_position != None and cur_html_pos > html_pos:
+            break
+        prev_hpos, prev_tpos = cur_html_pos, cur_text_pos
     
-    if textrp.html_text == textrp.true_text:
-        # position is in a plain text part
-        html_position = prev_hpos + (position - prev_tpos)
-    elif textrp.html_text > textrp.true_text:
-        # position is inside of html, choose position before.
-        html_position = prev_hpos
-    else:
-        raise ValueError("Position is outside of text length" + str(position))
-    
-    return html_position
+    if text_position:
+        if textrp.html_text == textrp.true_text:
+            # position is in a plain text part
+            out_position = prev_hpos + (text_position - prev_tpos)
+        elif textrp.html_text > textrp.true_text:
+            # position is inside of html, choose position before.
+            out_position = prev_hpos
+        else:
+            raise ValueError("Position is outside of text length" + 
+                str(text_position))
+    elif html_position:
+        if textrp.html_text == textrp.true_text:
+            out_position = prev_tpos + (html_position - prev_hpos)
+        elif textrp.html_text > textrp.true_text:
+            out_position = prev_tpos
+        else:
+            raise ValueError("Position is outside of text length" + 
+                str(html_position))
+    return out_position
 
 class TextRegPart(object):
     '''object to differentiate between standard text and html data for 

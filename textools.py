@@ -236,9 +236,12 @@ class RegGroupPart(object):
             self.replace_str = None
         self.data_list = None
     
-    def do_replace(self, replace_str):
+    def do_replace(self, replace):
         '''Mostly for use with compressions'''
-        self.replace_str = replace_str
+        if type(replace) not in (str, unicode):
+            self.replace = replace(self)
+        else:
+            self.replace = replace
         return self
     
     def init(self, text, regs):
@@ -494,35 +497,38 @@ def system_replace_regexp(path, regexp, replace):
     
     print '################################'    
 
-def re_search_replace(researched, repl, preview = False):
+def re_search_replace(researched, repl, preview = False, remove_plain = False):
     '''
-    NOTE: This function may affect the original data!!! All it does is add
-        data to the .replace_str values, but this will change the string and
-        formatting outputs.
-    Given the results from re_search, replace text.
-    If repl is a function, then it is called given the groups data
+    
+    Given the results from re_search, replace text. Outputs an iterator for
+        the results
+    
+    If repl is a function, then it is called given the RegPart object
+    
     if preview = True then it retuns a data_list with the 
-    RegPart objects who's .replace_str member has been updated.
+        RegPart objects who's .replace_str member has been updated.
+        NOTE: If preview = True, this function may affect the original data!!! 
+        All it does is add data to the .replace_str values, but this will change 
+        the string and formatting outputs.
     
     format functions that handle re_searched data will format this visually
     
     returns an iterator with the replacements. If you just want text, 
     just call ''.join(output)
     '''
-    if type(repl) in (str, unicode):
-        if preview == False:
-            return (n if type(n) in (str, unicode) else repl for n in researched)
+    if remove_plain:
+        researched = (n for n in researched if type(n) != str)
+                
+    if preview == False:
+        if type(repl) == str:
+            return (n if type(n) in (str, unicode) else repl for 
+                n in researched)
         else:
-            data = []
-            for n in researched:
-                if type(n) in (str, unicode):
-                    data.append(n)
-                else:
-                    data.append(n.do_replace(repl))
-            return data
-#            return (n if type(n) in (str, unicode) else n.do_replace(repl)
-#                for n in researched)
-    raise NotImplementedError()
+            return (n if type(n) in (str, unicode) else repl(n) 
+                for n in researched)
+    else:
+        return (n if type(n) in (str, unicode) else n.do_replace(repl) for
+            n in researched)
     
 def dev_research():
     import dbe
@@ -554,7 +560,7 @@ def dev_richtext():
     import dbe
     import pdb
     from extra.researched_richtext import (re_search_format_html, 
-        str_html_formatted, get_html_position)
+        str_html_formatted, get_position)
     
     global out, text, true_position
     text = '''talking about expecting the Spanish Inquisition in the text below: 
@@ -570,7 +576,7 @@ def dev_richtext():
     out =  re_search_format_html(researched)
     out_str = str_html_formatted(out)
 #    print out_str
-    pos = get_html_position(out, 10)
+    pos = get_position(out, 10)
     print out_str[pos: pos + 50]
     
 #    replaced = re_search_replace(researched, repl, preview = True)

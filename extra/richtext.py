@@ -73,5 +73,11 @@ def get_html_converted_and_subfun(text):
     converted_text = repl_or_re.sub(replace_fun, text)
     return converted_text, replace_fun
 
+deformat_keepif_bold_black = ['font-weight:600', 'color:#000000']
 
+def deformat_html(keepif):
+    '''keepif is a list of lists of regular expression strings to keep inside
+    of the span. So keepif = [['color:#ff0000;', 'font-weight:600']] would only keep
+    a span if it had both a red color and was bold and NO OTHER attributes.'''
+    reg_attribs, data = re.compile('(<span(.*?)>.*?</span>)')
 
