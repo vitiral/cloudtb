@@ -581,7 +581,7 @@ def dev_richtext():
     from bs4 import BeautifulSoup
     global soup
     soup = BeautifulSoup(out_str)
-    get_html_textparts(out_str, {'font-weight':600, 'color':'#000000'})
+#    get_html_textparts(out_str, {'font-weight':600, 'color':'#000000'})
     
 #    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)

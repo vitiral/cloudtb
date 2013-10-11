@@ -9,6 +9,8 @@ range = xrange
 import pdb
 import re
 
+import bs4  # Beautiful Soup 4
+
 from guitools import get_color_from_index, get_color_str
 
 try:
@@ -187,6 +189,7 @@ def text_format_html(text, html_span_tags, not_plain = False):
     
     return html_list
 
+
 deformat_keepif_bold_black = ['font-weight:600', 'color:#000000']
 
 '''
@@ -209,6 +212,28 @@ can use soup.find_all('p') to get all paragrphs
 >>> s.previous_element
 <span style=" font-weight:600;  text-decoration: underline; vertical-align:sub;">0:</span>
 '''
+BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
+def get_body_and_span(text):
+    ''' returns the body text and the (header, footer)'''
+    match = re.match(BODY_REGEXP)
+    header, body, footer = [match.group(n) for n in range(1,4)]
+    return body, (header, footer)    
+
+PARAGRAPH_REGEXP = '(<p[\w\W]*?>)([\w\W]*?)(</p>)'
+def get_paragraphs_regtext(text):
+    '''returns a list of paragraphs and regular text'''
+    return textools.re_search(PARAGRAPH_REGEXP, text)
+    
+SPAN_REGEXP = '(<span[\w\W]*?>)([\w\W]*?)(</span>)'
+def get_spans_regtext(text):
+    '''returns a list of spans (as regparts) and regular text'''
+    return textools.re_search(PARAGRAPH_REGEXP, text)
+
+GET_SPAN_ATTRIBUTES_RAW = r'<span style="[/w/W]*?">'
+def get_span_attributes(span_text):
+    '''given the first element of the span (group(1)), return
+    a dict of the attributes (i.e. color, etc)'''
+
 def get_html_textparts(html, keepif, keep_plain = True):
     '''
     keepif is a dict of attributes to keep. The expression has to be
@@ -220,12 +245,12 @@ def get_html_textparts(html, keepif, keep_plain = True):
     of the span. So keepif = [['color:#ff0000;', 'font-weight:600']] would only keep
     a span if it had both a red color and was bold and NO OTHER attributes.
     '''
-    import bs4
     bsoup = bs4.BeautifulSoup(html)
     next_el = bsoup.body.next_element
     html_list = []
     while next_el != None:
         if type(next_el) == bs4.element.NavigableString:
+            html_list.append(HtmlPart(next_el.abla))
             html_list.extend(text_format_html(next_el.text, ('', ''),
                 not_plain = not keep_plain))
         elif next_el.name == 'span':
