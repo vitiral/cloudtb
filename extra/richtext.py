@@ -229,10 +229,14 @@ def get_spans_regtext(text):
     '''returns a list of spans (as regparts) and regular text'''
     return textools.re_search(PARAGRAPH_REGEXP, text)
 
-GET_SPAN_ATTRIBUTES_RAW = r'<span style="[/w/W]*?">'
+SPAN_ATTRIB_REGEXP = re.compile(r'([\w\W]*?):([\w\W]*?);')
 def get_span_attributes(span_text):
     '''given the first element of the span (group(1)), return
     a dict of the attributes (i.e. color, etc)'''
+    _dl, matches = textools.re_search(SPAN_ATTRIB_REGEXP, span_text,
+                                   return_matches = True)
+    span_attribs = dict(((n.group(1), n.group(2)) for n in matches))
+    return span_attribs
 
 def get_html_textparts(html, keepif, keep_plain = True):
     '''

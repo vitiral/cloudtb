@@ -125,7 +125,8 @@ def get_match_paths(folder_path,
     
     return fpaths
 
-def re_search(regexp, text, start = 0, end = None, return_matches = False):
+def re_search(regexp, text, start = 0, end = None, 
+              return_matches = False):
     '''Research your re!
     
     The same as re.search except returns a list of text and objects.
