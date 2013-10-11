@@ -350,7 +350,7 @@ def replace_first(txt, rcmp_list, replacements):
 
 def get_rcmp_list(replacement_list):
     '''given a list of [[regex_str, replace_with], ...]
-    returns the values ored together and the list to be 
+    returns the values or'ed together and the list to be 
     used with replace_first
     
     returns repl_or_re (call the .sub method directly) 
@@ -503,7 +503,7 @@ def re_search_replace(researched, repl, preview = False, remove_plain = False):
     Given the results from re_search, replace text. Outputs an iterator for
         the results
     
-    If repl is a function, then it is called given the RegPart object
+    If repl is a function, then it is called given the RegGroupPart object
     
     if preview = True then it retuns a data_list with the 
         RegPart objects who's .replace_str member has been updated.
@@ -559,8 +559,8 @@ def dev_research():
 def dev_richtext():
     import dbe
     import pdb
-    from extra.researched_richtext import (re_search_format_html, 
-        str_html_formatted, get_position)
+    from extra.researched_richtext import re_search_format_html
+    from extra.richtext import str_html_formatted, get_position, get_html_textparts
     
     global out, text, true_position
     text = '''talking about expecting the Spanish Inquisition in the text below: 
@@ -577,7 +577,11 @@ def dev_richtext():
     out_str = str_html_formatted(out)
 #    print out_str
     pos = get_position(out, 10)
-    print out_str[pos: pos + 50]
+#    print out_str[pos: pos + 50]
+    from bs4 import BeautifulSoup
+    global soup
+    soup = BeautifulSoup(out_str)
+    get_html_textparts(out_str, {'font-weight':600, 'color':'#000000'})
     
 #    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)
@@ -590,5 +594,6 @@ if __name__ == '__main__':
 #    text = 'hello there bob'
 #    replace_list = [['hello', 'bye'],['bob', 'joe']]
 #    print text, '::', replace_text_with_list(replace_list, text)
+    
 
     
