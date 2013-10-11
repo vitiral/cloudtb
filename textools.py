@@ -553,9 +553,10 @@ def dev_research():
 def dev_richtext():
     import dbe
     import pdb
-    from extra.richtext import re_search_format_html
+    from extra.researched_richtext import (re_search_format_html, 
+        str_html_formatted, get_html_position)
+    
     global out, text, true_position
-    convert_to_regexp('^^^** hello **')
     text = '''talking about expecting the Spanish Inquisition in the text below: 
     Chapman: I didn't expect a kind of Spanish Inquisition. 
     (JARRING CHORD - the cardinals burst in) 
@@ -565,9 +566,13 @@ def dev_richtext():
     repl = r'What is this, the Spanish Inquisition?'
     researched = re_search(regexp, text)
     print text[10:30]
-    true_position = [10]
-    out =  re_search_format_html(researched, true_position = true_position)
-    print out[true_position[1]:true_position[1] + 50]
+#    pdb.set_trace()
+    out =  re_search_format_html(researched)
+    out_str = str_html_formatted(out)
+#    print out_str
+    pos = get_html_position(out, 10)
+    print out_str[pos: pos + 50]
+    
 #    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)
     

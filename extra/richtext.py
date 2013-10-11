@@ -98,8 +98,6 @@ def handle_stop_adding(true_position, converted_text, text, aplain, ahtml):
     get_true_pos, prev_plain_pos, prev_html_pos = true_position
     if aplain == ahtml:
         # StopAdding occured while adding standard text
-#        attempted_pos_html = prev_html_pos + ahtml
-#        set_true_pos = attempted_pos_html - (get_true_pos - prev_plain_pos)
         set_true_pos = prev_html_pos + (get_true_pos - prev_plain_pos)
     elif ahtml > aplain:
         # StopAdding occured inside of html, choose position before.

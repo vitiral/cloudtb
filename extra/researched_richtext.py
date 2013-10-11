@@ -4,12 +4,49 @@ Created on Thu Oct 10 18:41:49 2013
 
 @author: user
 """
+import pdb
 from guitools import get_color_from_index, get_color_str
 
-from richtext import (HEADER, FOOTER, html_replace_list, footer, paragraph, 
-    html_span_std, get_html_span_tags, CMP_NEWLINE, 
+from richtext import (HEADER, FOOTER, paragraph, 
+    html_span_std, get_html_span_tags,
     get_html_converted_and_subfun)
+
+def re_search_format_html(data_list, show_tags_on_replace = False):
+    html_list = [TextRegPart(HEADER, '')]
+
+    for data in data_list:
+        if type(data) == str:
+            html_list.extend(_text_format_html(data, html_span_std))
+        else:
+            html_list.extend(_regpart_format_html(data,
+                show_tags_on_replace = show_tags_on_replace))
+    html_list.append(TextRegPart(FOOTER, ''))
+    return html_list
+
+def str_html_formatted(html_list):
+    return ''.join((str(n) for n in html_list))
+
+def get_html_position(html_list, position):
+    html_pos, text_pos = 0, 0
+    prev_hpos, prev_tpos = 0, 0
+    for textrp in html_list:
+        html_pos += len(textrp.html_text)
+        text_pos += len(textrp.true_text)
+        if text_pos > position:
+            break
+        prev_hpos, prev_tpos = html_pos, text_pos
     
+    if textrp.html_text == textrp.true_text:
+        # position is in a plain text part
+        html_position = prev_hpos + (position - prev_tpos)
+    elif textrp.html_text > textrp.true_text:
+        # position is inside of html, choose position before.
+        html_position = prev_hpos
+    else:
+        raise ValueError("Position is outside of text length" + str(position))
+    
+    return html_position
+
 class TextRegPart(object):
     '''object to differentiate between standard text and html data for 
     RegParts'''
@@ -22,8 +59,10 @@ class TextRegPart(object):
     def __repr__(self):
         return self.html_text
 
-def text_format_html(text, html_span_tags, not_plain = False):
-    '''text_start is in the total body of input text'''
+def _text_format_html(text, html_span_tags, not_plain = False):
+    '''Formats a text body taking care of special html characters.
+    not_plain means that no text will be counted in the TextRegPart.true_text
+    attribute.'''
     if not text:
         return ''
     tag_st, tag_end = html_span_tags
@@ -65,11 +104,10 @@ def text_format_html(text, html_span_tags, not_plain = False):
         html_list.append(TextRegPart(add_html, add_plain))
         
         prev_reg = reg
-    else:
-        # never entered loop! No special characters = no subbed!
+    if not subbed_regs:# never entered loop! No special characters = no subbed!
         assert(converted_text == text)
         add_plain = '' if not_plain else text
-        ahtml = text
+        add_html = text
         html_list.append(TextRegPart(add_html, add_plain))
     
     if add_end:
@@ -81,7 +119,8 @@ def text_format_html(text, html_span_tags, not_plain = False):
     
     return html_list
 
-def regpart_format_html(regpart, show_tags_on_replace = False):
+def _regpart_format_html(regpart, show_tags_on_replace = False):
+    '''Formats a reg_part'''
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
 
@@ -106,57 +145,41 @@ def regpart_format_html(regpart, show_tags_on_replace = False):
                                             lower = True)
         match = match_data[0]
         
-        html_list.extend(text_format_html('{0}:'.format(match), html_span_tags,
+        html_list.extend(_text_format_html('{0}:'.format(match), html_span_tags,
                                           not_plain = True))
 
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
-            html_list.extend(text_format_html(
+            html_list.extend(_text_format_html(
                 '(', get_html_span_tags(bold = True, color = colors[i]),
                 not_plain = True))
     if replace:
-        html_list.extend(text_format_html(regpart.text, 
+        html_list.extend(_text_format_html(regpart.text, 
             get_html_span_tags(bold = True, color = std_color), 
             not_plain = False)) # want to clearly mark that this IS plain
             
     else:
         for data in data_list:
             if type(data) == str:
-                html_list.extend(text_format_html(data, 
+                html_list.extend(_text_format_html(data, 
                     get_html_span_tags(bold = True, color = std_color), 
                     not_plain = False))
             else:
-                html_list.extend(regpart_format_html(data, 
+                html_list.extend(_regpart_format_html(data, 
                                                      show_tags_on_replace))
     
     if show_tags_on_replace == True or replace == None:
         for i in range(len(indexes)):
-            html_list.extend(text_format_html(')', 
+            html_list.extend(_text_format_html(')', 
                 get_html_span_tags(bold = True, color = colors[i]), 
                 not_plain = True))
-            html_list.extend(text_format_html('{0}'.format(indexes[i]),
+            html_list.extend(_text_format_html('{0}'.format(indexes[i]),
                 get_html_span_tags(bold = True, color = colors[i], 
                                    lower = True), not_plain = True))
     
     if replace:
-        html_list.extend(text_format_html(replace,
+        html_list.extend(_text_format_html(replace,
             get_html_span_tags(bold = True, color = repl_color,
             underlined = True), not_plain = True))
     
     return html_list
-    
-def re_search_format_html(data_list, show_tags_on_replace):
-    html_list = [TextRegPart(HEADER, '')]
-
-    for data in data_list:
-        if type(data) == str:
-            html_list.extend(text_format_html(data, html_span_std))
-        else:
-            html_list.append(regpart_format_html(data,
-                show_tags_on_replace = show_tags_on_replace))
-    html_list.append(TextRegPart(FOOTER, ''))
-    return html_list
-
-def formatted_to_html(html_list):
-    return ''.join((str(n) for n in html_list))
-    
