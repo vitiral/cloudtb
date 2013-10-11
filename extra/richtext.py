@@ -28,14 +28,14 @@ html_replace_list = [
 html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
     for n in html_replace_list]
 
-header = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
+HEADER = header = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 '''"http://www.w3.org/TR/REC-html40/strict.dtd"><html><head>'''
 '''<meta name="qrichtext" content="1" /><style type="text/css">'''
 '''p, li { white-space: pre-wrap; }</style></head><body style=" '''
 '''font-family:'Sans Serif'; font-size:9pt; font-weight:400; '''
 '''font-style:normal;">''') # no formatting
 
-footer = '''</body></html>'''
+FOOTER = footer = '''</body></html>'''
 
 paragraph = ('''<p style=" margin-top:0px; margin-bottom:0px; '''
 '''margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'''
@@ -86,15 +86,12 @@ def add_plain_html(true_position, add_plain, add_html):
     true_position[1] = plain
     true_position[2] = html
 
-class TextRegPart(object):
-    '''object to differentiate between standard text and html data for 
-    RegParts'''
-    def __init__(self, text, true_text):
-        '''true_text is the base (non - decorative) text of RegPart
-        objects'''
-        self.text = text
-        self.true_text = true_text
-    
+
+
+
+
+
+
 def handle_stop_adding(true_position, converted_text, text, aplain, ahtml):
     if converted_text == None:
         converted_text = get_html_converted_and_subfun(text)[0]
