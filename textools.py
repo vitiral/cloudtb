@@ -580,10 +580,10 @@ def dev_richtext():
     pos = get_position(out, 10)
 #    print out_str[pos: pos + 50]
     from bs4 import BeautifulSoup
-    global soup
-    soup = BeautifulSoup(out_str)
-#    get_html_textparts(out_str, {'font-weight':600, 'color':'#000000'})
+    global soup, el, htp
     
+    htp = get_html_textparts(out_str, {'font-weight':'600', 'color':'#000000'})
+    print htp
 #    replaced = re_search_replace(researched, repl, preview = True)
 #    print format_re_search(researched)
     

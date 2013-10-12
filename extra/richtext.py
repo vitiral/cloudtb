@@ -93,7 +93,7 @@ def get_position(html_list, text_position = None, html_position = None):
         cur_text_pos+= len(textrp.true_text)
         if text_position != None and cur_text_pos> text_position:
             break
-        elif html_position != None and cur_html_pos > html_pos:
+        elif html_position != None and cur_html_pos > html_position:
             break
         prev_hpos, prev_tpos = cur_html_pos, cur_text_pos
     
@@ -212,59 +212,124 @@ can use soup.find_all('p') to get all paragrphs
 >>> s.previous_element
 <span style=" font-weight:600;  text-decoration: underline; vertical-align:sub;">0:</span>
 '''
+
 BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
-def get_body_and_span(text):
+def get_headfoot(text):
     ''' returns the body text and the (header, footer)'''
-    match = re.match(BODY_REGEXP)
+    match = re.match(BODY_REGEXP, text)
     header, body, footer = [match.group(n) for n in range(1,4)]
-    return body, (header, footer)    
+    return header, footer   
 
-PARAGRAPH_REGEXP = '(<p[\w\W]*?>)([\w\W]*?)(</p>)'
-def get_paragraphs_regtext(text):
-    '''returns a list of paragraphs and regular text'''
-    return textools.re_search(PARAGRAPH_REGEXP, text)
+NAMED_FRONT_BACK_REGEXP = '(<{name}[\w\W]*?>)([\w\W]*?)(</{name}>)'
+def get_named_body_frontback(text, name):
+    regcmp = re.compile(NAMED_FRONT_BACK_REGEXP.format(name = name))
+    match =  regcmp.match(text)
+    front, body, back = [match.group(n) for n in range(1,4)]
+    return body, (front, back)
     
-SPAN_REGEXP = '(<span[\w\W]*?>)([\w\W]*?)(</span>)'
-def get_spans_regtext(text):
-    '''returns a list of spans (as regparts) and regular text'''
-    return textools.re_search(PARAGRAPH_REGEXP, text)
-
 SPAN_ATTRIB_REGEXP = re.compile(r'([\w\W]*?):([\w\W]*?);')
-def get_span_attributes(span_text):
+def get_style_attributes(span_text):
     '''given the first element of the span (group(1)), return
     a dict of the attributes (i.e. color, etc)'''
     _dl, matches = textools.re_search(SPAN_ATTRIB_REGEXP, span_text,
                                    return_matches = True)
-    span_attribs = dict(((n.group(1), n.group(2)) for n in matches))
+    span_attribs = dict(((str(n.group(1).strip()), 
+                          str(n.group(2).strip())) 
+                          for n in matches))
     return span_attribs
 
+def html_process_span(bs_span, keepif, keep_plain):
+    '''proceses the span given the span element. Returns the 
+    the next element to call .next_element on and html_list'''
+    html_list = []
+    text_element = bs_span.next_element
+    if type(text_element) != bs4.element.NavigableString:
+        text_element = None
+    
+    style = bs_span.attrs['style']
+    style_attrs = get_style_attributes(style)
+    if len(keepif) != len(style_attrs):
+        do_keep = False
+    else:
+        for key, value in keepif.iteritems():
+            key, value = key.strip(), value.strip()
+            if key not in style_attrs or style_attrs[key] != value:
+                do_keep = False
+                break
+        else:
+            do_keep = True
+    body, fback = get_named_body_frontback(str(bs_span), 'span')
+    front, back = fback; del fback
+    html_list.append(HtmlPart(front, ''))
+    
+    append_text = text_element if text_element != None else ''
+    html_list.extend(text_format_html(append_text, ('', ''), not_plain = 
+        not do_keep))
+    if text_element != None:
+        relem = text_element
+    else:
+        relem = bs_span
+    
+    return relem, html_list
+
+def html_process_paragraph(bs_paragraph, keepif, keep_plain):
+    html_list = []
+    body, fback = get_named_body_frontback(str(bs_paragraph), 'p')
+    front, back = fback; del fback
+    front = HtmlPart(front, '')
+    back = HtmlPart(back, '\n')
+    html_list.append(front)
+    
+    next_el = bs_paragraph.next_element
+    if type(next_el) != bs4.element.NavigableString and (
+        next_el == None or next_el.name == 'p'):
+        # next element is another paragraph! (or end of body)
+        out_el = bs_paragraph
+        html_list.append(back)
+    elif type(next_el) == bs4.element.NavigableString:
+        html_list.extend(text_format_html(str(next_el), ('', ''), not_plain =
+            not keep_plain))
+        out_el = next_el
+    else:
+        assert(next_el.name == 'span')
+        out_el, hlist = html_process_span(next_el, keepif, keep_plain)
+        html_list.extend(hlist)
+    html_list.append(back)
+    return out_el, html_list
+    
 def get_html_textparts(html, keepif, keep_plain = True):
     '''
-    keepif is a dict of attributes to keep. The expression has to be
-    either all these attributes or plain to be kept (unless keep_plain == False)
+    keepif is a dict of attributes to keep. 
+    For the expression to be kept, it has to match either ALL
+    these attributes or be plain text (unless keep_plain == False)
+    
     returns HtmlParts with the .true_text and .html_text set
     appropriately
-    
-    keepif is a list of lists of regular expression strings to keep inside
-    of the span. So keepif = [['color:#ff0000;', 'font-weight:600']] would only keep
-    a span if it had both a red color and was bold and NO OTHER attributes.
     '''
+    header, footer = get_headfoot(html)
+    
     bsoup = bs4.BeautifulSoup(html)
     next_el = bsoup.body.next_element
-    html_list = []
+    html_list = [HtmlPart(header, '')]
     while next_el != None:
         if type(next_el) == bs4.element.NavigableString:
-            html_list.append(HtmlPart(next_el.abla))
-            html_list.extend(text_format_html(next_el.text, ('', ''),
+            # at first I was kind of upset that bsoup couldn't give
+            # me the raw html. Then I realized that I can just use
+            # my own function to get it... and everything else!
+            html_list.extend(text_format_html(str(next_el), ('', ''),
                 not_plain = not keep_plain))
+        
         elif next_el.name == 'span':
-            pass
+            next_el, hlist = html_process_span(next_el, keepif, keep_plain)
+            html_list.extend(hlist)
+            
         elif next_el.name == 'p':
-            pass
+            next_el, hlist = html_process_paragraph(next_el, keepif, 
+                                                    keep_plain)
+            html_list.extend(hlist)
         else:
             raise IOError("unrecognized element: " + next_el)
         next_el = next_el.next_element
-        
-#    for paragraph in bsoup.find_all('p'):
-#        pdb.set_trace()
+    html_list.append(HtmlPart(footer, ''))
+    return html_list
     
