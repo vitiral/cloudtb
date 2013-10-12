@@ -14,7 +14,7 @@
 #    furnished to do so, subject to the following conditions:
 #    
 #    The above copyright notice and this permission notice shall be included in
-#    all copies or substantial portions of the Softwainre.
+#    all copies or substantial portions of the Software.
 #    
 #    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -23,7 +23,7 @@
 #    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
-#    
+#
 #    http://opensource.org/licenses/MIT
 
 import pdb
@@ -337,13 +337,12 @@ def ensure_parenthesis(reg_exp):
         reg_exp = '(' + reg_exp + ')'
     return reg_exp
 
+# TODO: refactor to "replace_all_first"
 def replace_first(txt, rcmp_list, replacements):
-    '''returns the first replacement that has a positive match to
-    text
+    '''returns the first replacement that has a positive match to text
         rcmp_list -- list of compiled expressions
         replacements -- list of expressions to replace with
     '''
-    
     _len = len(txt)
     assert(len(rcmp_list) == len(replacements))
     try:
