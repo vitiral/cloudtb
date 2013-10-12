@@ -7,8 +7,8 @@ Created on Thu Oct 10 18:41:49 2013
 import pdb
 from guitools import get_color_from_index, get_color_str
 
-from richtext import (HEADER, FOOTER, paragraph, 
-    html_span_std, get_html_span_tags, text_format_html, HtmlPart)
+from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags, 
+                      text_format_html, HtmlPart)
 
 def re_search_format_html(data_list, show_tags_on_replace = False):
     html_list = [HtmlPart(HEADER, '')]

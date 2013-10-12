@@ -9,7 +9,11 @@ range = xrange
 import pdb
 import re
 
-import bs4  # Beautiful Soup 4
+try:
+    import bs4  # Beautiful Soup 4
+except ImportError:
+    pass        # some functions will work without bsoup. It is up to
+                # developers to make sure dependencies are met
 
 from guitools import get_color_from_index, get_color_str
 
@@ -19,16 +23,6 @@ except ValueError:
     import iteration, textools
 
 # replace list going from regular text to html
-html_replace_list = [
-[r'<'    ,r'&lt;'],
-[r'>'    ,r'&gt;'],
-[r'\&'   ,r'&amp;'],
-[r'"'    , r'&quot'],
-['\n'    , r'<\p><p>'], # develper must handle first and last '\n' characters 
-                        #when subbing!
-]
-html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
-    for n in html_replace_list]
 
 HEADER = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 '''"http://www.w3.org/TR/REC-html40/strict.dtd"><html><head>'''
@@ -39,7 +33,7 @@ HEADER = ('''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" '''
 
 FOOTER = '''</body></html>'''
 
-paragraph = ('''<p style=" margin-top:0px; margin-bottom:0px; '''
+PARAGRAPH_SPAN = ('''<p style=" margin-top:0px; margin-bottom:0px; '''
 '''margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'''
 , '''</p>''')
 
@@ -54,34 +48,27 @@ lower_tplate = ''' vertical-align:sub;'''
 
 CMP_NEWLINE = re.compile('\n')
 
-def get_html_span_tags(underlined = '', bold = '', color = '',
-                    lower = ''):
-    if bold:
-        bold = bold_tplate
-    if underlined:
-        underlined = underlined_tplate
-    if color:
-        if type(color) != str:
-            color = get_color_str(color = color)
-        color = color_tplate.format(color = color)
-    if lower:
-        lower = lower_tplate
-    return (span_template[0].format(bold = bold, underlined = underlined, 
-              color = color, lower = lower), span_template[1])
-
-def get_html_converted_and_subfun(text):
-    repl_or_re, repl_re = textools.get_rcmp_list(html_replace_list)
-    replace_fun = textools.subfun(replace_list = repl_re)
-    converted_text = repl_or_re.sub(replace_fun, text)
-    return converted_text, replace_fun
-
-def str_html_formatted(html_list):
+html_replace_list = [
+[r'<'    ,r'&lt;'],
+[r'>'    ,r'&gt;'],
+[r'\&'   ,r'&amp;'],
+[r'"'    , r'&quot'],
+['\n'    , ''.join(PARAGRAPH_SPAN[::-1])], 
+         # NOTE: develper must handle first and last '\n' characters 
+         # when subbing!
+]
+html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
+    for n in html_replace_list]
+    
+def get_str_html_formatted(html_list):
+    '''get the standard string of an html_list return'''
     return ''.join((str(n) for n in html_list))
-
+    
 def get_position(html_list, text_position = None, html_position = None):
     '''given either a text position or html position, return the other
     position
-    So if you give the html_position, you will recieve the text_position
+    For instance, if you give the html_position, you will recieve the 
+    text_position
     '''
     # TODO: make it do an average for selecting decorator elements.
     if None not in (text_position, html_position):
@@ -117,6 +104,47 @@ def get_position(html_list, text_position = None, html_position = None):
                 str(html_position))
     return out_position
 
+def deformat_html(html, keepif, keep_plain = True):
+    '''
+    "Deformats" an html into HtmlParts that are dependent on the keepif
+        variable. This allows you to get absolute position of decorated text.
+        (i.e. if you only want plain and black bold text, then 
+        keepif = {'font-weight':'600', 'color':'#000000'})
+        
+    keepif is a dict of attributes to keep. 
+    For the expression to be kept, it has to match either ALL
+    these attributes or be plain text (unless keep_plain == False)
+    
+    returns HtmlParts with the .true_text and .html_text set
+    appropriately
+    '''
+    header, footer = get_headfoot(html)
+    
+    bsoup = bs4.BeautifulSoup(html)
+    next_el = bsoup.body.next_element
+    html_list = [HtmlPart(header, '')]
+    while next_el != None:
+        if type(next_el) == bs4.element.NavigableString:
+            # at first I was kind of upset that bsoup couldn't give
+            # me the raw html. Then I realized that I can just use
+            # my own function to get it... and everything else!
+            html_list.extend(text_format_html(str(next_el), ('', ''),
+                not_plain = not keep_plain))
+        
+        elif next_el.name == 'span':
+            next_el, hlist = html_process_span(next_el, keepif, keep_plain)
+            html_list.extend(hlist)
+            
+        elif next_el.name == 'p':
+            next_el, hlist = html_process_paragraph(next_el, keepif, 
+                                                    keep_plain)
+            html_list.extend(hlist)
+        else:
+            raise IOError("unrecognized element: " + next_el)
+        next_el = next_el.next_element
+    html_list.append(HtmlPart(footer, ''))
+    return html_list
+
 class HtmlPart(object):
     '''object to differentiate between standard text and html data for 
     RegParts'''
@@ -128,6 +156,28 @@ class HtmlPart(object):
     
     def __repr__(self):
         return self.html_text
+        
+''' Internal functions'''
+def get_html_span_tags(underlined = '', bold = '', color = '',
+                    lower = ''):
+    if bold:
+        bold = bold_tplate
+    if underlined:
+        underlined = underlined_tplate
+    if color:
+        if type(color) != str:
+            color = get_color_str(color = color)
+        color = color_tplate.format(color = color)
+    if lower:
+        lower = lower_tplate
+    return (span_template[0].format(bold = bold, underlined = underlined, 
+              color = color, lower = lower), span_template[1])
+
+def get_html_converted_and_subfun(text):
+    repl_or_re, repl_re = textools.get_rcmp_list(html_replace_list)
+    replace_fun = textools.subfun(replace_list = repl_re)
+    converted_text = repl_or_re.sub(replace_fun, text)
+    return converted_text, replace_fun
 
 def text_format_html(text, html_span_tags, not_plain = False):
     '''Formats a text body taking care of special html characters.
@@ -139,8 +189,7 @@ def text_format_html(text, html_span_tags, not_plain = False):
     html_list = [HtmlPart(tag_st, '')]
         
     if text[0] == '\n':
-        #TODO: is this the right way to do this?? kind of confusing
-        add_html = ''.join(paragraph[::-1])
+        add_html = ''.join(PARAGRAPH_SPAN[::-1])
         add_plain = '' if not_plain else text[0]
         html_list.append(HtmlPart(add_html, add_plain))
         text = text[1:]
@@ -148,7 +197,7 @@ def text_format_html(text, html_span_tags, not_plain = False):
     add_end = None
     if text[-1] == '\n':
         add_end = True 
-        end_html = ''.join(paragraph[::-1])
+        end_html = ''.join(PARAGRAPH_SPAN[::-1])
         end_plain = '' if not_plain else text[-1]
         text = text[:-1]
     
@@ -189,30 +238,6 @@ def text_format_html(text, html_span_tags, not_plain = False):
     
     return html_list
 
-
-deformat_keepif_bold_black = ['font-weight:600', 'color:#000000']
-
-'''
-Can use soup.find_all('spans') to get all spans
-can use soup.find_all('p') to get all paragrphs
-
-
->>> soup.span.strings
-<generator object _all_strings at 0x1bae8c0>
->>> list(soup.span.strings)
-[u'0:']
->>> s =list(soup.span.strings)
->>> s.index
-<built-in method index of list object at 0x1bdc908>
->>> type(s)
-<type 'list'>
->>> s = s[0]
->>> type(s)
-<class 'bs4.element.NavigableString'>
->>> s.previous_element
-<span style=" font-weight:600;  text-decoration: underline; vertical-align:sub;">0:</span>
-'''
-
 BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
 def get_headfoot(text):
     ''' returns the body text and the (header, footer)'''
@@ -241,7 +266,6 @@ def get_style_attributes(span_text):
 def html_process_span(bs_span, keepif, keep_plain):
     '''proceses the span given the span element. Returns the 
     the next element to call .next_element on and html_list'''
-    html_list = []
     text_element = bs_span.next_element
     if type(text_element) != bs4.element.NavigableString:
         text_element = None
@@ -258,78 +282,50 @@ def html_process_span(bs_span, keepif, keep_plain):
                 break
         else:
             do_keep = True
+    
     body, fback = get_named_body_frontback(str(bs_span), 'span')
-    front, back = fback; del fback
-    html_list.append(HtmlPart(front, ''))
+    span_front, span_back = fback; del fback
+    span_front, span_back = HtmlPart(span_front, ''), HtmlPart(span_back, '')
+    html_list = [span_front]
     
     append_text = text_element if text_element != None else ''
     html_list.extend(text_format_html(append_text, ('', ''), not_plain = 
         not do_keep))
     if text_element != None:
-        relem = text_element
+        out_elem = text_element
     else:
-        relem = bs_span
+        out_elem = bs_span
     
-    return relem, html_list
+    html_list.append(span_back)
+    return out_elem, html_list
 
 def html_process_paragraph(bs_paragraph, keepif, keep_plain):
-    html_list = []
     body, fback = get_named_body_frontback(str(bs_paragraph), 'p')
     front, back = fback; del fback
     front = HtmlPart(front, '')
     back = HtmlPart(back, '\n')
-    html_list.append(front)
     
-    next_el = bs_paragraph.next_element
-    if type(next_el) != bs4.element.NavigableString and (
-        next_el == None or next_el.name == 'p'):
-        # next element is another paragraph! (or end of body)
-        out_el = bs_paragraph
-        html_list.append(back)
-    elif type(next_el) == bs4.element.NavigableString:
-        html_list.extend(text_format_html(str(next_el), ('', ''), not_plain =
-            not keep_plain))
-        out_el = next_el
-    else:
-        assert(next_el.name == 'span')
-        out_el, hlist = html_process_span(next_el, keepif, keep_plain)
-        html_list.extend(hlist)
-    html_list.append(back)
-    return out_el, html_list
-    
-def get_html_textparts(html, keepif, keep_plain = True):
-    '''
-    keepif is a dict of attributes to keep. 
-    For the expression to be kept, it has to match either ALL
-    these attributes or be plain text (unless keep_plain == False)
-    
-    returns HtmlParts with the .true_text and .html_text set
-    appropriately
-    '''
-    header, footer = get_headfoot(html)
-    
-    bsoup = bs4.BeautifulSoup(html)
-    next_el = bsoup.body.next_element
-    html_list = [HtmlPart(header, '')]
-    while next_el != None:
-        if type(next_el) == bs4.element.NavigableString:
-            # at first I was kind of upset that bsoup couldn't give
-            # me the raw html. Then I realized that I can just use
-            # my own function to get it... and everything else!
-            html_list.extend(text_format_html(str(next_el), ('', ''),
-                not_plain = not keep_plain))
-        
-        elif next_el.name == 'span':
+    html_list = [front]
+    prev_el = bs_paragraph; del bs_paragraph
+    next_el = prev_el
+    while True:
+        next_el = next_el.next_element
+        if type(next_el) != bs4.element.NavigableString and (
+            next_el == None or next_el.name == 'p'):
+            # next element is another paragraph! (or end of body)
+            out_el = prev_el
+            html_list.append(back)
+            break
+        elif type(next_el) == bs4.element.NavigableString:
+            html_list.extend(text_format_html(str(next_el), ('', ''), not_plain =
+                not keep_plain))
+            next_el = next_el
+        else:
+            assert(next_el.name == 'span')
             next_el, hlist = html_process_span(next_el, keepif, keep_plain)
             html_list.extend(hlist)
-            
-        elif next_el.name == 'p':
-            next_el, hlist = html_process_paragraph(next_el, keepif, 
-                                                    keep_plain)
-            html_list.extend(hlist)
-        else:
-            raise IOError("unrecognized element: " + next_el)
-        next_el = next_el.next_element
-    html_list.append(HtmlPart(footer, ''))
-    return html_list
-    
+            next_el = next_el
+        prev_el = next_el
+        
+    html_list.append(back)
+    return out_el, html_list

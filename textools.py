@@ -557,11 +557,18 @@ def dev_research():
     from extra.richtext import re_search_format_html
     print re_search_format_html(repl)
 
-def dev_richtext():
+    
+#    replaced = re_search_replace(researched, repl, preview = True)
+#    print format_re_search(researched)
+    
+#    print re_search_format_html(replaced)
+
+if __name__ == '__main__':
     import dbe
     import pdb
     from extra.researched_richtext import re_search_format_html
-    from extra.richtext import str_html_formatted, get_position, get_html_textparts
+    from extra.richtext import get_position, deformat_html
+    from extra.richtext import get_str_html_formatted    
     
     global out, text, true_position
     text = '''talking about expecting the Spanish Inquisition in the text below: 
@@ -575,26 +582,16 @@ def dev_richtext():
     print text[10:30]
 #    pdb.set_trace()
     out =  re_search_format_html(researched)
-    out_str = str_html_formatted(out)
-#    print out_str
-    pos = get_position(out, 10)
+    out_str = get_str_html_formatted(out)
+#    pos = get_position(out, 10)
 #    print out_str[pos: pos + 50]
     from bs4 import BeautifulSoup
     global soup, el, htp
     
-    htp = get_html_textparts(out_str, {'font-weight':'600', 'color':'#000000'})
-    print htp
-#    replaced = re_search_replace(researched, repl, preview = True)
-#    print format_re_search(researched)
-    
-#    print re_search_format_html(replaced)
-
-if __name__ == '__main__':
-    dev_richtext()
-#    pass
-#    text = 'hello there bob'
-#    replace_list = [['hello', 'bye'],['bob', 'joe']]
-#    print text, '::', replace_text_with_list(replace_list, text)
+    htp = deformat_html(out_str, {'font-weight':'600', 'color':'#000000'})
+    hform = get_str_html_formatted(htp)    
+    soup = BeautifulSoup(hform)    
+    print soup.prettify()
     
 
     
