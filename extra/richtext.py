@@ -166,7 +166,7 @@ class HtmlPart(object):
         self.html_text = html_text
         self.true_text = true_text
     
-    def __repr__(self):
+    def __str__(self):
         return self.html_text
     
     def __eq__(self, other):

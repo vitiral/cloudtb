@@ -303,7 +303,7 @@ class RegGroupPart(object):
         self.data_list = data_list
         return len(data_list)
    
-    def __repr__(self):
+    def __str__(self):
         start, end = '', ''
         if self.match_data != None:
             match = self.match_data[0]
@@ -315,8 +315,8 @@ class RegGroupPart(object):
         str_data = ''.join([str(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
     
-    def __str__(self):
-        return repr(self)
+    def __repr__(self):
+        return object.__repr__(self) + '["""' + str(self) + '"""]'
     
     def group(self, index):
         '''Function so that RegPart can interface with things that use 
