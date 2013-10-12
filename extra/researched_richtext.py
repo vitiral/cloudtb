@@ -20,7 +20,8 @@ def re_search_format_html(data_list, show_tags_on_replace = False):
             html_list.extend(_regpart_format_html(data,
                 show_tags_on_replace = show_tags_on_replace))
     html_list.append(HtmlPart(FOOTER, ''))
-    return html_list
+    html_list = (n for n in html_list if bool(n))
+    return tuple(html_list)
 
 def _regpart_format_html(regpart, show_tags_on_replace = False):
     '''Formats a reg_part'''

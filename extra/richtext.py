@@ -48,17 +48,19 @@ lower_tplate = ''' vertical-align:sub;'''
 
 CMP_NEWLINE = re.compile('\n')
 
-html_replace_list = [
+#TODO: removed wordtex compatibility with the & symbol!
+html_replace_str_list = [
 [r'<'    ,r'&lt;'],
 [r'>'    ,r'&gt;'],
-[r'\&'   ,r'&amp;'],
+#[r'\&'  ,r'&amp;'],
+[r'&'    ,r'&amp;'],
 [r'"'    , r'&quot'],
 ['\n'    , ''.join(PARAGRAPH_SPAN[::-1])], 
          # NOTE: develper must handle first and last '\n' characters 
          # when subbing!
 ]
 html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
-    for n in html_replace_list]
+    for n in html_replace_str_list]
     
 def get_str_html_formatted(html_list):
     '''get the standard string of an html_list return'''
@@ -71,8 +73,10 @@ def get_position(html_list, text_position = None, html_position = None):
     text_position
     '''
     # TODO: make it do an average for selecting decorator elements.
-    if None not in (text_position, html_position):
-        raise ValueError("Can only find one position at at ime")
+    if text_position == None and html_position == None:
+        raise TypeError("Must find at least one position")
+    if text_position != None and html_position != None:
+        raise TypeError("Can only find one position at a time")
     cur_html_pos, cur_text_pos = 0, 0
     prev_hpos, prev_tpos = 0, 0
     for textrp in html_list:
@@ -84,7 +88,7 @@ def get_position(html_list, text_position = None, html_position = None):
             break
         prev_hpos, prev_tpos = cur_html_pos, cur_text_pos
     
-    if text_position:
+    if text_position != None:
         if textrp.html_text == textrp.true_text:
             # position is in a plain text part
             out_position = prev_hpos + (text_position - prev_tpos)
@@ -94,7 +98,7 @@ def get_position(html_list, text_position = None, html_position = None):
         else:
             raise ValueError("Position is outside of text length" + 
                 str(text_position))
-    elif html_position:
+    elif html_position != None:
         if textrp.html_text == textrp.true_text:
             out_position = prev_tpos + (html_position - prev_hpos)
         elif textrp.html_text > textrp.true_text:
@@ -102,8 +106,14 @@ def get_position(html_list, text_position = None, html_position = None):
         else:
             raise ValueError("Position is outside of text length" + 
                 str(html_position))
+    else: assert(False)    
+
     return out_position
 
+KEEPIF = {
+'black-bold': {'font-weight':'600', 'color':'#000000'},
+
+}
 def deformat_html(html, keepif, keep_plain = True):
     '''
     "Deformats" an html into HtmlParts that are dependent on the keepif
@@ -143,7 +153,9 @@ def deformat_html(html, keepif, keep_plain = True):
             raise IOError("unrecognized element: " + next_el)
         next_el = next_el.next_element
     html_list.append(HtmlPart(footer, ''))
-    return html_list
+    # remove empty HtmlParts
+    html_list = (n for n in html_list if bool(n))
+    return tuple(html_list)
 
 class HtmlPart(object):
     '''object to differentiate between standard text and html data for 
@@ -156,6 +168,16 @@ class HtmlPart(object):
     
     def __repr__(self):
         return self.html_text
+    
+    def __eq__(self, other):
+        if (self.html_text == other.html_text) and (self.true_text == 
+                other.true_text):
+            return True
+        else:
+            return False
+    
+    def __bool__(self):
+        return bool(self.html_text + self.true_text)
         
 ''' Internal functions'''
 def get_html_span_tags(underlined = '', bold = '', color = '',
