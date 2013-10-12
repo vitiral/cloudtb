@@ -130,7 +130,7 @@ class biter(object):
             if item < 0:
                 raise IndexError('Cannot address biter with '
                     'negative index: ' + repr(item))
-            return next(islice(self._iter, item))
+            return next(islice(self._iter, item, item + 1))
 
         if type(item) == slice:
             # get the indexes, and then convert to the number
@@ -199,8 +199,8 @@ class soliditer(object):
     Watch out on using too many itertools.chains with hard data that you are
     re-integrating. You can create a memory leak!
     '''
-    def __init__(self, iterable, default_buf = 200,
-                request_extend_multiply = 5, request_soft_limit = 1000,
+    def __init__(self, iterable, default_buf = 10,
+                request_extend_multiply = 1, request_soft_limit = 1000,
                 request_hard_limit = None, slicetype = tuple):
         self._been_iterized = False
         self.__next__ = self.next
@@ -222,7 +222,7 @@ class soliditer(object):
         try:
             return self._databuf.pop(0)
         except IndexError:
-            self.internal_extend(self.default_buf)
+            self.internal_extend(1, self.default_buf)
             if self.buffer_size() == 0:
                 raise StopIteration
 
@@ -237,6 +237,11 @@ class soliditer(object):
         self._been_iterized = True
         return chain(self._databuf, *self._iterbuf)
 
+    def front_extend(self, iterable):
+        '''adds data onto the front'''
+        assert(not self._been_iterized)
+        self._databuf = list(iterable) + self._databuf
+    
     def extend(self, iterable):
         '''adds data onto the end'''
         assert(not self._been_iterized)
@@ -245,13 +250,13 @@ class soliditer(object):
     def append(self, item):
         assert(not self._been_iterized)
         self.extend((item,))
-
+    
     def insert(self, index, item):
         assert(not self._been_iterized)
         self.internal_extend(index)
         self._databuf.insert(index, item)
 
-    def internal_extend(self, to_length, min_len = None):
+    def internal_extend(self, need_length, want_length = None):
         '''consume one iter at a time until at correct length.
         return True if operation succeeds,
         False if it fails
@@ -259,29 +264,37 @@ class soliditer(object):
         By default all is needed (min_len = None)
         '''
         assert(not self._been_iterized)
-        if to_length < self.default_buf:
-            to_length = self.default_buf
+        if need_length < self.default_buf:
+            need_length = self.default_buf
 
         hlimit = self.request_hard_limit
-        needed = to_length - self.buffer_size()
-        if (min_len != None and needed > self.request_soft_limit):
-            needed = min_len - self.buffer_size()
-
+        needed = need_length - self.buffer_size()
+        wanted = needed if want_length == None else (
+            want_length - self.buffer_size())
+        want_length = want_length if want_length != None else need_length
+        
         if hlimit != None and needed > hlimit:
             raise RequestError("extend higher than hard limit", needed)
 
-        while needed > 0:
+        while wanted > 0:
             if len(self._iterbuf) == 0:
                 return False
             it = self._iterbuf[0]
-            sliced = islice(it, 0, to_length)
+            sliced = islice(it, 0, need_length)
             self._databuf.extend(sliced)
-            done, it = isdone(it)
-            needed = to_length - self.buffer_size()
-            if done:
+            iter_done, it = isdone(it)
+            self._iterbuf[0] = it
+            bufsize = self.buffer_size()
+            wanted = want_length - bufsize
+            needed = need_length - bufsize
+            if iter_done:
                 self._iterbuf.pop(0)
-            else:
-                assert(needed == 0)
+            if needed > 0 and not self._iterbuf:
+                raise IndexError("Index outside of existing extend")
+            elif wanted > 0 and not self._iterbuf:
+                # You can't always get what you want... but if you try 
+                # sometimes, you just might find.... YOU GET WHAT YOU NEED!
+                break
         return True
 
     def consume(self, n):
@@ -297,8 +310,7 @@ class soliditer(object):
         if type(item) == slice:
             return self.slicetype(solidslice(self, item, consume = False))
         elif type(item) == int:
-            self.internal_extend(item * self.request_extend_multiply,
-                min_len = item)
+            self.internal_extend(item + 1)
             return self._databuf[item]
         else:
             raise TypeError("can only request slices or indexes")
@@ -309,10 +321,12 @@ class soliditer(object):
         except ValueError:
             start = self.buffer_size()
             # extend buffer, try again.
-            self.internal_extend(self.default_buf + start)
+            self.internal_extend(1, request_length = self.default_buf + start)
+            # syntax stuff is pretty odd for index. It is [start], stop            
             if len(args) == 2:
                 return self.index(value, start, args[1])
             else:
+                # for this one, start actually == stop
                 return self.index(value, start)
 
 class solidslice(object):
@@ -350,7 +364,7 @@ class solidslice(object):
             self.__started = True
             return out
 
-        if self.stop != None and self.index + step > self.stop:
+        if self.stop != None and self.index + step >= self.stop:
             raise StopIteration
 
         getindex = step
@@ -366,15 +380,15 @@ class solidslice(object):
                 self.soliditer.consume(step)
         return out
 
-def f(iterator):
+def isdone(iterator):
     '''tells you whether the iterator is out if items without harming it.
     returns the new rebuilt iterable
     returns isdone, iterator'''
     try:
         value = next(iterator)
+        return False, chain((value,), iterator)
     except StopIteration:
         return True, iterator
-    return False, chain((value,), iterator)
 
 if VERSION == 3:
     def read_xrange(xrange_object):

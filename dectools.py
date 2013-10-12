@@ -230,18 +230,7 @@ class keeptime(object):
         decorated_function.time_keeper = self
         return decorated_function
 
-def pdb_on_exception(function):
-    '''decorates function to go to pdb when there is an exception.  Consider
-    importing exceptDebug instead'''
-    def returnfunction(*args, **kwargs):
-        try:
-             return function(*args, **kwargs)
-        except Exception as E:
-             traceback.print_tb(sys.exc_info()[2])
-        print E
-        tb = sys.exc_info()[2]
-        pdb.post_mortem(tb)
-    return returnfunction
+
 
 class force_iter(object):
     '''
