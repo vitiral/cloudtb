@@ -35,8 +35,9 @@ alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
 
 def format_re_search(list_data, pretty = False):
-    '''If pretty == True then each item starts on it's own line with a '>>| '
-    at the front'''
+    '''Returns a string of researched data that is semi-seasy to read.
+    If pretty == True then each item starts on it's own line with a '>>| '
+    at the front (easier to read)'''
     strings = (str(n) for n in list_data)
     if pretty:
         return '\n>>|'.join(strings)
@@ -44,6 +45,7 @@ def format_re_search(list_data, pretty = False):
         return ''.join(strings)
 
 def get_orig_researched(re_searched):
+    '''get original text'''
     return ''.join((n if type(n) == str else n.text for n in re_searched))
 
 def get_str_researched(re_searched):
@@ -52,13 +54,13 @@ def get_str_researched(re_searched):
     strings = (n if type(n) == str else n.text if not n.replace_str \
         else n.replace_str for n in re_searched)
     return ''.join(strings)
-
+    
 def get_matches(researched):
     '''returns an iterator of only the matches from a re_search output'''
     return (m for m in researched if type(m) != str)
 
 def get_line(text, position, start = 0):
-    '''
+    ''' UNDER DEVELOPMENT
     returns what line the position is on in the text between the start
     and position'''
     pos = start
@@ -78,7 +80,8 @@ def get_match_paths(folder_path,
                     recurse = True, 
                     max_len_searched = None,
                     watchers = None):
-    '''get the file paths in a folder that have text which matches
+    '''UNDER_DEVELOPMENT
+    get the file paths in a folder that have text which matches
     the regular expression.
     Watchers should be a list of watchers to be called on each new file name
     '''
@@ -239,10 +242,10 @@ class RegGroupPart(object):
     
     def do_replace(self, replace):
         '''Mostly for use with compressions'''
-        if type(replace) not in (str, unicode):
-            self.replace = replace(self)
+        if type(replace) in (str, unicode):
+            self.replace_str = replace
         else:
-            self.replace = replace
+            self.replace_str = replace(self)
         return self
     
     def init(self, text, regs):
@@ -306,12 +309,12 @@ class RegGroupPart(object):
             match = self.match_data[0]
             start = '<*m{0}>[['.format(match)
             end = r']]'
-            replace = self.replace_str
-            if replace:
-                end += r'==>[[{0}]]'.format(replace)
-        str_data = ''.join([n if type(n) == str else repr(n) for n in self.data_list])
+            replace_str = self.replace_str
+            if replace_str:
+                end += r'==>[[{0}]]'.format(replace_str)
+        str_data = ''.join([str(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
-
+    
     def __str__(self):
         return repr(self)
     
@@ -498,7 +501,8 @@ def system_replace_regexp(path, regexp, replace):
     
     print '################################'    
 
-def re_search_replace(researched, repl, preview = False, remove_plain = False):
+def re_search_replace(researched, repl, preview = True, remove_plain = False,
+                      return_type = tuple):
     '''
     
     Given the results from re_search, replace text. Outputs an iterator for
@@ -514,22 +518,27 @@ def re_search_replace(researched, repl, preview = False, remove_plain = False):
     
     format functions that handle re_searched data will format this visually
     
-    returns an iterator with the replacements. If you just want text, 
-    just call ''.join(output)
+    returns a tuple with the replacements. If you just want text, 
+    just call ''.join(output).
+    
+    You can specifiy a different return type by changing return_type (
+        iter for an iterator, list for a list, etc)
     '''
     if remove_plain:
-        researched = (n for n in researched if type(n) != str)
-                
+        researched = (n for n in researched if type(n) not in (str, unicode))
+    
     if preview == False:
         if type(repl) == str:
-            return (n if type(n) in (str, unicode) else repl for 
+            out = (n if type(n) in (str, unicode) else repl for 
                 n in researched)
         else:
-            return (n if type(n) in (str, unicode) else repl(n) 
+            out =  (n if type(n) in (str, unicode) else repl(n) 
                 for n in researched)
     else:
-        return (n if type(n) in (str, unicode) else n.do_replace(repl) for
+        out = (n if type(n) in (str, unicode) else n.do_replace(repl) for
             n in researched)
+        
+    return return_type(out)
     
 def dev_research():
     import dbe

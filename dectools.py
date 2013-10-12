@@ -160,15 +160,26 @@ class standardExceptionLog(object):
 def pdb_on_exception(function):
     '''decorates function to go to pdb when there is an exception.  Consider
     importing exceptDebug instead'''
-    def returnfunction(*args, **kwargs):
-            try:
-                return function(*args, **kwargs)
-            except Exception as E:
-                traceback.print_tb(sys.exc_info()[2])
-                print E
-                tb = sys.exc_info()[2]
-                pdb.post_mortem(tb)
-    return returnfunction
+    def decorated_function(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except Exception as E:
+            traceback.print_tb(sys.exc_info()[2])
+            print E
+            tb = sys.exc_info()[2]
+            pdb.post_mortem(tb)
+    update_wrapper(decorated_function, function)
+    return decorated_function
+
+class debug(object):
+    def __init__(self, DEBUG):
+        self.DEBUG = DEBUG
+    
+    def __call__(self, function):
+        if self.DEBUG:
+            return pdb_on_exception(function)
+        else:
+            return function
 
 class ensure_delay(object):
     '''decorator function to ensure that the member functions decorated

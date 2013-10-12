@@ -18,26 +18,28 @@ except ValueError:
         sys.path.insert(1, '..')
         import iteration
         import dectools
-        print 'Running as outside module'
+        print 'Running as __main__'
 
 import unittest
 import random
 
+DEBUG = True
+
 def get_ranges(number):
         return (range(n, n + 100) for n in range(number))
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_basic(self):
     a1 = xrange(0, 100)
     self.assertIterEqual(a1, self.get_object(a1))
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_add(self):
     a1, a2 = get_ranges(2)
     self.assertIterEqual(a1 + a2, self.get_object(a1) 
         + self.get_object(a2))
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_extend(self):
     a1, a2 = get_ranges(2)
     b1 = self.get_object(a1)
@@ -46,14 +48,14 @@ def test_extend(self):
     b1.front_extend(a2)
     self.assertIterEqual(a1, b1)
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_extend_front(self):
     a1, a2 = get_ranges(2)
     b1 = self.get_object(a1)
     b1.front_extend(a2)
     self.assertIterEqual(a2 + a1, b1)
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_slice(self, recreate = True):
     a1 = range(-100, 1000)
     b1 = self.get_object(a1)
@@ -79,7 +81,7 @@ def test_slice(self, recreate = True):
     self.assertIterEqual(a1[start:stop:step],
                      b1[start:stop:step])
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_slice_repeat(self, reobject = False):
     st, end = 100, 1233
     a1 = range(st, end)
@@ -96,7 +98,7 @@ def test_slice_repeat(self, reobject = False):
     b1 = b1[start:stop:step]
     self.assertIterEqual(a1, b1)
 
-@dectools.pdb_on_exception
+@dectools.debug(DEBUG)
 def test_getitem(self, recreate = True):
     a1 = range(-100, 1000)
     b1 = self.get_object(a1)
@@ -140,7 +142,6 @@ class soliditerTest(unittest.TestCase, std_iterator):
         return iteration.soliditer(*args, **kwargs)
     
     def test_getitem(self):
-#        pdb.set_trace()
         return test_getitem(self, recreate = False)
     
 if __name__ == '__main__':
