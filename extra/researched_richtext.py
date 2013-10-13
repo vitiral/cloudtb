@@ -34,7 +34,7 @@ from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags,
                       text_format_html, HtmlPart)
 
 def re_search_format_html(data_list, show_tags_on_replace = False):
-    html_list = [HtmlPart(HEADER, '')]
+    html_list = [HtmlPart(HEADER, '', '')]
 
     for data in data_list:
         if type(data) == str:
@@ -42,7 +42,7 @@ def re_search_format_html(data_list, show_tags_on_replace = False):
         else:
             html_list.extend(_regpart_format_html(data,
                 show_tags_on_replace = show_tags_on_replace))
-    html_list.append(HtmlPart(FOOTER, ''))
+    html_list.append(HtmlPart(FOOTER, '', ''))
     html_list = (n for n in html_list if bool(n))
     return tuple(html_list)
 
