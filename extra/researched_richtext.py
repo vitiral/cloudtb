@@ -26,11 +26,7 @@
 #
 #    http://opensource.org/licenses/MIT
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 10 18:41:49 2013
 
-@author: user
-"""
 import pdb
 from guitools import get_color_from_index, get_color_str
 

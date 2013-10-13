@@ -26,11 +26,7 @@
 #
 #    http://opensource.org/licenses/MIT
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 11 23:36:51 2013
 
-@author: user
-"""
 import pdb
 try:
     from .. import iteration

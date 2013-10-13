@@ -26,11 +26,7 @@
 #
 #    http://opensource.org/licenses/MIT
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Oct  8 21:33:45 2013
 
-@author: user
-"""
 range = xrange
 
 import pdb
