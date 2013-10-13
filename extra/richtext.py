@@ -143,8 +143,11 @@ def deformat_html(html, keepif, keep_plain = True):
         variable. This allows you to get absolute position of decorated text.
         (i.e. if you only want plain and black bold text, then 
         keepif = {'font-weight':'600', 'color':'#000000'})
-        
-    keepif is a dict of attributes to keep. 
+    
+    if keepif == True then all text (that isn't html tags) is kept
+    if keepif == None, then none is kept unless it is plain
+    
+    otherwise, keepif is a dict of attributes to keep. 
     For the expression to be kept, it has to match either ALL
     these attributes or be plain text (unless keep_plain == False)
     
@@ -317,7 +320,11 @@ def html_process_span(bs_span, keepif, keep_plain):
     
     style = bs_span.attrs['style']
     style_attrs = get_style_attributes(style)
-    if len(keepif) != len(style_attrs):
+    if keepif == True:
+        do_keep = True
+    elif keepif == None:
+        do_keep = False
+    elif len(keepif) != len(style_attrs):
         do_keep = False
     else:
         for key, value in keepif.iteritems():

@@ -34,6 +34,12 @@ import iteration
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
 
+LOWER_LETTER_SET = set((chr(n) for n in xrange(ord('a'), ord('z') + 1)))
+UPPER_LETTER_SET = set((chr(n) for n in xrange(ord('A'), ord('Z') + 1)))
+WORD_SET = set(('_',))
+WORD_SET.update(LOWER_LETTER_SET)
+WORD_SET.update(UPPER_LETTER_SET)
+
 def format_re_search(list_data, pretty = False):
     '''Returns a string of researched data that is semi-seasy to read.
     If pretty == True then each item starts on it's own line with a '>>| '

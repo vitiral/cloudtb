@@ -32,6 +32,13 @@ not been used for a long time.
 
 It will also be eventually extended to a new type of data, harddata. This data
 type will automatically store it's variable if it hasn't been used in a while.
+
+It uses the threading module after the first call of get_temp_file. If your
+applicationc cannot support threading, then:
+    set THREAD_HANDLED = True
+    call create_temp_directory
+    call THREAD_manage_harddata about every .5 seconds
+    
 """
 import sys, os
 import pdb
@@ -68,7 +75,14 @@ tmp_regexp = r'^{0}(.*?){1}$'.format(textools.convert_to_regexp(STR_TEMP_PREFIX)
 
 tmp_regexp = re.compile(tmp_regexp)
 
+def get_temp_file():
+    if not TEMP_DIRECTORY:
+        create_temp_directory()
+    tempfile.mkstemp(suffix = STR_TEMP_SUFIX, prefix = STR_TEMP_PREFIX,
+                     dir = TEMP_DIRECTORY)
+
 def create_harddata_thread():
+    assert(not THREAD_HANDLED)
     global THREAD_harddata
     from errors import ModuleError
     try:
@@ -89,27 +103,35 @@ def create_harddata_thread():
             while True:
                 print "running thread"
                 start_time = time.time()
-                for hd in _HARDDATA:
-                    hd._check(time.time())
+                THREAD_manage_harddata()
                 if time.time() - start_time > THREAD_PERIOD:
                     # the _check took longer than the thread period!
                     # TODO: change this to logging. Here for debug
                     assert(0)
                 else:
                     time.sleep(self.last_run - start_time)
-                manage_temp_dirs()
+                
         
     THREAD_harddata = harddata_thread(_HARDDATA)
+    THREAD_HANDLED = True
     THREAD_harddata.run()
 
 def create_temp_directory():
     global TEMP_DIRECTORY
     TEMP_DIRECTORY = tempfile.mkdtemp(suffix = '.hd', prefix = STR_TEMP_PREFIX, 
                               dir = tempfile.gettempdir())
-    manage_temp_dirs()
-    create_harddata_thread()
+    
+    THREAD_manage_harddata()
 
-def manage_temp_dirs():
+    if not THREAD_HANDLED:
+        create_harddata_thread()
+
+def THREAD_manage_harddata():
+    for hd in _HARDDATA:
+        hd._check(time.time())
+    _manage_temp_dirs()
+    
+def _manage_temp_dirs():
     update_timer_file()
     
     temp_folders = (tmpf for tmpf in os.listdir(tempfile.gettempdir()) 
@@ -134,6 +156,6 @@ def check_timer(folder_path):
     if time.time() - os.path.getatime(timer_path) > DELETE_TMP_AFTER:
         return False
     return True
-
+    
 if __name__ == '__main__':
     pass

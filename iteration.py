@@ -31,7 +31,7 @@ and numpy arrays.
 
 Note: Imports itertools namespace so can be used instead of itertools
 '''
-from itertools import *
+import itertools as itools
 import math
 import sys
 
@@ -66,7 +66,7 @@ class biter(object):
         for n in biter:
             pass
         or
-        next(islice(biter, item))
+        next(itools.itools.islice(biter, item))
         
     Usage:
         # want to extend my iterator
@@ -93,27 +93,27 @@ class biter(object):
         self.solid_iter = None
 
     def append(self, value):
-        self._iter = chain(self._iter, (value,))
+        self._iter = itools.chain(self._iter, (value,))
     
     def insert(self, position, value):
         if position not in (0, -1):
             raise ValueError("can only insert in front or back")
         if position == 0:
-            self._iter = chain((value,), self._iter)
+            self._iter = itools.chain((value,), self._iter)
         elif position == -1:
             self.append(value)
         else:
             assert(0)
         
     def extend(self, iterable):
-        self._iter = chain(self._iter, iterable)
+        self._iter = itools.chain(self._iter, iterable)
 
     def front_extend(self, iterable):
         '''extends in front of the iterator'''
-        self._iter = chain(iterable, self._iter)
+        self._iter = itools.chain(iterable, self._iter)
 
     def __add__(self, iterable):
-        self._iter = chain(self._iter, iterable)
+        self._iter = itools.chain(self._iter, iterable)
         return self._iter
 
     def __next__(self):
@@ -130,11 +130,11 @@ class biter(object):
             if item < 0:
                 raise IndexError('Cannot address biter with '
                     'negative index: ' + repr(item))
-            return next(islice(self._iter, item, item + 1))
+            return next(itools.islice(self._iter, item, item + 1))
 
         if type(item) == slice:
             # get the indexes, and then convert to the number
-            self._iter = islice(self._iter, item.start,
+            self._iter = itools.islice(self._iter, item.start,
                     item.stop, item.step)
             return self._iter
 
@@ -235,7 +235,7 @@ class soliditer(object):
         and the output from iterize simultaniously (they will affect
         eachother)'''
         self._been_iterized = True
-        return chain(self._databuf, *self._iterbuf)
+        return itools.chain(self._databuf, *self._iterbuf)
 
     def front_extend(self, iterable):
         '''adds data onto the front'''
@@ -280,7 +280,7 @@ class soliditer(object):
             if len(self._iterbuf) == 0:
                 return False
             it = self._iterbuf[0]
-            sliced = islice(it, 0, need_length)
+            sliced = itools.islice(it, 0, need_length)
             self._databuf.extend(sliced)
             iter_done, it = isdone(it)
             self._iterbuf[0] = it
@@ -386,7 +386,7 @@ def isdone(iterator):
     returns isdone, iterator'''
     try:
         value = next(iterator)
-        return False, chain((value,), iterator)
+        return False, itools.chain((value,), iterator)
     except StopIteration:
         return True, iterator
 
@@ -516,7 +516,7 @@ def find_depth(value):
 
     if hasattr(value, 'next'): # if it is an itterator
         firstval = value.next()     # take a peek
-        value = chain((firstval,), value)
+        value = itools.chain((firstval,), value)
     else:
         firstval = value[0]
 
@@ -534,7 +534,7 @@ def get_first(data):
 
      if hasattr(data, 'next'): # if it is an itterator
           firstval = data.next()     # take a peek
-          data = chain((firstval,), data)
+          data = itools.chain((firstval,), data)
           return firstval, data
 
      firstval = data[0]
@@ -543,57 +543,58 @@ def get_first(data):
 ''' These functions are all fast list lookups not supported by any module in
 python. They use iterators and compressors to do things as fast as possible in
 native python'''
-def is_all_type(iterator, dtype):
+def is_all_type(data_list, dtype, start = 0, stop = None):
+    data_list = itools.islice(data_list, start, stop)
     try:
-        next((n for n in data if type(data) != dtype))
+        next((n for n in data_list if type(n) != dtype))
         return False
     except StopIteration:
         return True
                 
 
-def special_figt(data_list, value, start = 0):
-    index = first_index_gt(data_list, value, start)
+def special_figt(data_list, value, start = 0, stop = None):
+    index = first_index_gt(data_list, value, start, stop)
     if data_list[index + 1] > value:
         return index + start
     else:
         return - 1
 
-def first_index_gt(data_list, value, start = 0):
+def first_index_gt(data_list, value, start = 0, stop = None):
     '''return the first index greater than value from a given list like object'''
-    data_list = islice(data_list, start, None)
+    data_list = itools.islice(data_list, start, stop)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] > value)
         return index + start
     except StopIteration: return - 1
 
-def first_index_gtet(data_list, value, start = 0):
+def first_index_gtet(data_list, value, start = 0, stop = None):
     '''return the first index greater than value from a given list like object'''
-    data_list = islice(data_list, start, None)
+    data_list = itools.islice(data_list, start, stop)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] >= value)
         return index + start
     except StopIteration: return - 1
 
-def first_index_lt(data_list, value, start = 0):
+def first_index_lt(data_list, value, start = 0, stop = None):
     '''return the first index less than value from a given list like object'''
-    data_list = islice(data_list, start, None)
+    data_list = itools.islice(data_list, start, stop)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] < value)
         return index + start
     except StopIteration: return - 1
 
-def first_index_ne(data_list, value, start = 0):
+def first_index_ne(data_list, value, start = 0, stop = None):
     '''returns first index not equal to the value from list'''
-    data_list = islice(data_list, start, None)
+    data_list = itools.islice(data_list, start, stop)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] != value)
         return index + start
     except StopIteration: return - 1
 
-def first_index_et(data_list, value, start = 0):
+def first_index_et(data_list, value, start = 0, stop = None):
     '''same as data_list.index(value), except with exception handling (returns
     -1). Also finds 'nan' values '''
-    data_list = islice(data_list, start, None)
+    data_list = itools.islice(data_list, start, stop)
     try:
         if type(value) == float and math.isnan(value):
             floats = set(float,)
@@ -608,6 +609,23 @@ def first_index_et(data_list, value, start = 0):
             enumerate(data_list) if data[1] == value) + start
     except (ValueError, StopIteration): return - 1
 
+def first_index_in(data_list, in_set, start = 0, stop = None):
+    '''finds the first index that is in a given set of any iterator'''
+    data_list = itools.islice(data_list, start, stop)
+    try:
+        index = next(data[0] for data in enumerate(data_list) if 
+            data[1] in in_set)
+        return index + start
+    except StopIteration: return - 1
+
+def first_index_nin(data_list, notin_set, start = 0, stop = None):
+    '''finds the first index that is not in a given set of any iterator'''
+    data_list = itools.islice(data_list, start, stop)
+    try:
+        index = next(data[0] for data in enumerate(data_list) if 
+            data[1] not in notin_set)
+        return index + start
+    except StopIteration: return - 1
 
 '''Numpy only functions
 These functions can only be used with numpy

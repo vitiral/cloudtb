@@ -30,14 +30,22 @@ import logging, tempfile, os, sys, time, traceback
 #from logging import CRITICAL, DEBUG, ERROR, FATAL, WARN, WARNING, INFO
 global IS_SETUP, MAX_SIZE, USE_DBE
 
-IS_SETUP = False
-MAX_SIZE = 10e6 # maximum size of std log file = 10MB
-USE_DBE = False    # will use dbe when level == loggging.DEBUG.  If set to false, it will not.
 
-def setuplogger(filename = 'python.log', directory = None, format =
-                '%(levelname)s:%(name)s.%(funcName)s:%(message)s', level = logging.INFO, ignoresize = False, dbeDisabled = False):
+MAX_SIZE = 10e6 # maximum size of std log file = 10MB
+USE_DBE = False    # will use dbe when level == loggging.DEBUG.  
+                   # If set to false, it will not.
+
+# the Setup Logger automatically handles the level and everything else
+IS_SETUP = False
+LEVEL = None
+
+def setup_logger(level = logging.INFO, filename = 'python.log', directory = None, format =
+                '%(levelname)s:%(name)s.%(funcName)s:%(message)s', 
+                ignoresize = False, dbeDisabled = False):
    #'L:%(name)s M:%(module)s F:%(funcName)s T:%(asctime)s > %(levelname)s: %(message)s'
-   global IS_SETUP
+   global IS_SETUP, LEVEL
+   if IS_SETUP:
+       return
    if directory == None:
 #      fd, fname = tempfile.mkstemp()
 #      directory = os.path.dirname(fname)
@@ -66,22 +74,21 @@ def setuplogger(filename = 'python.log', directory = None, format =
    if level == logging.DEBUG:
       print 'log at: ' + fullpath
       if dbeDisabled == False and USE_DBE == True:
-         import dbe
-      log_fatal_exception()
+          log_fatal_exception()
 
-   mylog = getLogger('LogStart')
+   mylog = get_logger('LogStart')
    mylog.setLevel(level)
    mylog.info('\n{0:*^80}'.format(' ##$ LOGGING STARTED '
               + time.strftime("%Y/%m/%d %H:%M:%S", time.localtime()) + ' $## '))
 
-
-def getLogger(logname = None, modname = None, funname = None, level = logging.INFO, dbeDisabled = False):
+def get_logger(logname = None, modname = None, funname = None, 
+              level = logging.INFO, dbeDisabled = False):
    '''returns a logger with logname that will print to the temporary directory.
-   If level is == logging.DEBUG it will automatically do post-exception logging, and go into
-   dbe (unless dbeDisabled is set).  In this way, the operation of all my debugging can be
-   set by a single variable.'''
+   If level is == logging.DEBUG it will automatically do post-exception 
+   logging, and go into dbe (unless dbeDisabled is set).  In this way, the 
+   operation of all my debugging can be set by a single variable.'''
    if IS_SETUP == False:
-      setuplogger(level = level, dbeDisabled = dbeDisabled)
+      setup_logger(level = level, dbeDisabled = dbeDisabled)
 
    while logname == None:
       stack = traceback.extract_stack()
@@ -109,20 +116,18 @@ def log_fatal_exception():
          previous_except_hook(exctype, value, tb)
 
       log = getLogger('FATAL_EXCEPTION')
-      log.critical(str(exctype) + '\n' + str(value) + '\n' + ''.join(traceback.format_tb(tb)))
+      log.critical(str(exctype) + '\n' + str(value) + '\n' + 
+          ''.join(traceback.format_tb(tb)))
 
    previous_except_hook = sys.excepthook
    sys.excepthook = except_hook
 
-
-
 if __name__ == '__main__':
-   log = getLogger(__name__, level = logging.DEBUG)
+   log = get_logger(__name__, level = logging.DEBUG)
    log.info('working?')
    log.info('yes, seems to be working')
 
-   log2 = getLogger(__name__)
+   log2 = get_logger(__name__)
    log2.info('still working?')
 
-   log_fatal_exception()
    x = 1 / 0
