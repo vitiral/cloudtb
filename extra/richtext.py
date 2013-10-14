@@ -195,10 +195,18 @@ def get_position(html_list, text_position = None, html_position = None,
     
     return out_text_pos, out_vis_pos, out_html_pos
 
-KEEPIF = {
-'black-bold': {'font-weight':'600', 'color':'#000000'},
 
+class COLOR:
+    RED =   get_color_str(255,  0,      0)
+    GREEN = get_color_str(0,    255,    0)
+    BLUE =  get_color_str(0,    0,      255)
+    BLACK = get_color_str(0,    0,      0)
+    
+KEEPIF = {
+'black-bold': {'font-weight':'600', 'color':'#' + COLOR.BLACK},
+'red-underlined-bold': {'font-weight':'600', 'color':'#' + COLOR.RED},
 }
+
 def deformat_html(html, keepif, keep_plain = True):
     '''
     "Deformats" an html into HtmlParts that are dependent on the keepif
@@ -393,18 +401,22 @@ def html_process_span(bs_span, keepif, keep_plain):
     style_attrs = get_style_attributes(style)
     if keepif == True:
         do_keep = True
-    elif keepif == None:
-        do_keep = False
-    elif len(keepif) != len(style_attrs):
+    elif not keepif:
         do_keep = False
     else:
-        for key, value in keepif.iteritems():
-            key, value = key.strip(), value.strip()
-            if key not in style_attrs or style_attrs[key] != value:
-                do_keep = False
-                break
-        else:
-            do_keep = True
+        if type(keepif) not in (list, tuple):
+            keepif = (keepif,)
+        do_keep = False
+        for kif in keepif:
+            if len(kif) == len(style_attrs):
+                for key, value in kif.iteritems():
+                    key, value = key.strip(), value.strip()
+                    if key not in style_attrs or style_attrs[key] != value:
+                        break # break out of for loop, don't keep
+                else:
+                    # all keys match, it's good.
+                    do_keep = True
+                    break
     
     body, fback = get_named_body_frontback(str(bs_span), 'span')
     span_front, span_back = fback; del fback

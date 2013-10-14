@@ -134,44 +134,21 @@ def get_match_paths(folder_path,
     
     return fpaths
 
-def re_search(regexp, text, start = 0, end = None, 
-              return_matches = False):
-    '''Research your re!
+def _re_search_yield(regexp, text, start = 0, end = None, 
+                     matches = None):
+    '''Internal implementation of re_search that allows for iteration. Use
+    re_search with return_type = iter instead
     
-    The same as re.search except returns a list of text and objects.
-    These objects give you much more information on how your regexp
-    processed the text.
+    matches = [] if you want it to keep track of matches'''
+    if type(regexp) in (str, tuple):
+        pat = regexp
+    else:
+        pat = regexp.pattern
+
+    if pat == '':
+        yield text
+        raise StopIteration
     
-    EXAMPLE:
-    >>> text = """Researching my re search is really easy with this handy new \
-tool! It shows me my matches and group number, I think it is great that  \
-they're seen in this new light!"""
-    >>> regexp = r'([Rr]e ?se\w*)|(([Tt]h)?is)'  # matches any capitalization
-        # of "re se..." where the space is optional, and also will match This, 
-        # this, or is
-    >>> researched = re_search(regexp, text)
-    >>> print format_re_search(researched)
-<*m0>[[{Researching}<g0>]] my <*m1>[[{re search}<g0>]] <*m2>[[{is}<g1>]] really
- easy with <*m3>[[{this}<g1>]] handy new tool! It shows me my matches and group
- number, I think it <*m4>[[{is}<g1>]] great that  they'<*m5>[[{re seen}<g0>]]
- in <*m6>[[{this}<g1>]] new light!
-     
-    Analyzing Output:
-        The re_search function formats the output into a (semi) easy to read
-        format as follows:
-        <*m#>[[match_text]] - This is the text you would get from re.findall, 
-                                where the # is the index you would get.
-        {group_text}<g#>    - This is the text of the group inside the match, 
-                                with the coresponding group number (#).
-    
-    The actual output of the funcion is a list containing strings and
-    RegGroupPart objects of the searched text.
-    
-    If return_matches is set to true, it returns a list of only the 
-    matches as the second variable -- data_list, matches
-    
-    For easier to read formating, use the GUI tool #TODO: name of gui tool
-'''
     if end == None:
         end = len(text)
     absolute_end = end
@@ -180,15 +157,22 @@ they're seen in this new light!"""
     stop = start
     if type(regexp) == str:    
         regexp = re.compile(regexp)
-    data_list = []
-    matches_list = []
     match = 0
+    count = 0
     prev_stop = stop
     while stop < absolute_end:
+        count += 1
+        if count > absolute_end:
+            assert(0)   # prevent infinite loop -- This happened to me and
+                        # re_search kept building an infinite tuple.
+                        # It ended up consuming almost a gig of memory and
+                        # nearly crashed my computer!  Haha, goodtimes
+        
         searched = regexp.search(text, stop, absolute_end)
+        
         if searched == None:
-            if not data_list:   # no match found
-                return None
+#            if not data_list:   # no match found
+#r              return 
             break
         regs = searched.regs
         # overriding a very annoying feature of the re module where somehow
@@ -207,24 +191,91 @@ they're seen in this new light!"""
         span = searched.span()
         start, stop = span
         
-        data_list.append(text[prev_stop:start])
+        txt = text[prev_stop:start]
+        if txt != '':
+            yield txt
         
         index = iteration.first_index_ne(groups, None)
         new_RegGroupPart = RegGroupPart(groups, index, 
                                         match_data = (match, span, regexp))
         new_RegGroupPart.init(text, regs)
-        matches_list.append(new_RegGroupPart)
-        data_list.append(new_RegGroupPart)
-        assert(get_orig_researched(data_list) == text[:stop])
+        if matches != None:
+            matches.append(new_RegGroupPart)
+        yield new_RegGroupPart
         prev_stop = stop
         match += 1
+
+    yield text[stop:]
+
+def re_search(regexp, text, start = 0, end = None, 
+              return_matches = None, return_type = tuple):
+    '''Research your re!
     
-    data_list.append(text[stop:])
-    data_list = tuple((n for n in data_list if n != ''))
-    if return_matches:
-        return data_list, matches_list
+    The same as re.search if you kept performing it after each match for
+        the whole text.
+    
+    This returns a list of text and objects. These objects give you much 
+    more information on how your regexp processed the text.
+    
+    EXAMPLE:
+    >>> text = """Researching my re search is really easy with this handy new \
+tool! It shows me my matches and group number, I think it is great that  \
+they're seen in this new light!"""
+    >>> regexp = r'([Rr]e ?se\w*)|(([Tt]h)?is)'  # matches any capitalization
+        # of "re se..." where the space is optional, and also will match 
+        # "This", "this", or "is"
+    >>> researched = re_search(regexp, text)
+    >>> print format_re_search(researched)
+<*m0>[[{Researching}<g0>]] my <*m1>[[{re search}<g0>]] <*m2>[[{is}<g1>]] really
+ easy with <*m3>[[{this}<g1>]] handy new tool! It shows me my matches and group
+ number, I think it <*m4>[[{is}<g1>]] great that  they'<*m5>[[{re seen}<g0>]]
+ in <*m6>[[{this}<g1>]] new light!
+     
+    Analyzing Output:
+        The re_search function formats the output into a (semi) easy to read
+        format as follows:
+        <*m#>[[match_text]] - This is the text you would get from re.findall, 
+                                where the # is the index you would get.
+        {group_text}<g#>    - This is the text of the group inside the match, 
+                                with the coresponding group number (#).
+    
+    -- For an easier to read format use the function above with pretty = True,
+        or use a GUI like Kiki or Search The Sky (Search the Sky uses this
+        module and is developed by the same person.)
+    
+    The actual output of the funcion is a list containing strings and
+    RegGroupPart objects of the searched text.
+    
+    If return_matches is set to true, it returns a list of only the 
+    matches as the second variable -- data_list, matches
+    
+    For easier to read formating, use the GUI tool #TODO: name of gui too
+    
+    Other outputs:
+        If the regexp pattern == '' it just returns the whole string, rather than
+        empty strings separated by RegPart objects.
+        
+        If no match is found, returns None
+        
+        change return_type to change the output style. list, tuple, and iter
+        are supported. If you choose iter and you want it to return the
+        matches, then return_matches must equal an empty array (where the
+            matches will be stored)
+    '''
+    if return_type not in (tuple, list, iter):
+        raise TypeError("return_type must be tuple, list, or iter function")
+        
+    if return_type == iter:
+        if return_matches or return_matches != []:
+            raise TypeError("for iterator return, matches must be None or []")
+        itresearch = _re_search_yield(regexp, text, start, end, return_matches)
+        return iter(itresearch)
+    elif return_matches:
+        matches = []
+        itresearch = _re_search_yield(regexp, text, start, end, matches)
+        return return_type(itresearch), matches
     else:
-        return data_list
+        return return_type(_re_search_yield(regexp, text, start, end))
     
 class RegGroupPart(object):
     def __init__(self, groups, index, match_data = None):
