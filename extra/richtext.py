@@ -78,10 +78,18 @@ html_replace_str_list = [
 #[r'\&'  ,r'&amp;'],
 [r'&'    ,r'&amp;'],
 [r'"'    , r'&quot'],
-['\n'    , ''.join(PARAGRAPH_SPAN[::-1])], 
+['\n'    , ''.join(PARAGRAPH_SPAN[::-1])], # ALWAYS make sure this 
+                                           #is the last line!
+]                                # The application depends on it!
          # NOTE: develper must handle first and last '\n' characters 
          # when subbing!
-]
+
+# oK, I can solve the code formating problem simply
+# getpos needs to return the index of the last HtmlPart and the
+# relative index where pos is.
+# Then I just find where the strings differ next(n[0] for n in enumerate(text) if n[1] != text2[n[0]])
+# and finally how much (len(text) - len(text2))
+# then I go through the parts and replace the true text with the visible text
 html_replace_str_dict = dict(html_replace_str_list)
 
 html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
@@ -235,7 +243,7 @@ def deformat_html(html, keepif, keep_plain = True):
             # me the raw html. Then I realized that I can just use
             # my own function to get it... and everything else!
             html_list.extend(text_format_html(str(next_el), ('', ''),
-                not_plain = not keep_plain))
+                not_plain = not keep_plain, ignore_newlines = True))
         
         elif next_el.name == 'span':
             next_el, hlist = html_process_span(next_el, keepif, keep_plain)
@@ -301,13 +309,17 @@ def get_html_span_tags(underlined = '', bold = '', color = '',
     return (span_template[0].format(bold = bold, underlined = underlined, 
               color = color, lower = lower), span_template[1])
 
-def get_html_converted_and_subfun(text):
-    repl_or_re, repl_re = textools.get_rcmp_list(html_replace_list)
+def get_html_converted_and_subfun(text, replace_html_list = None):
+    if replace_html_list == None:
+        replace_html_list = html_replace_list
+        
+    repl_or_re, repl_re = textools.get_rcmp_list(replace_html_list)
     replace_fun = textools.subfun(replace_list = repl_re)
     converted_text = repl_or_re.sub(replace_fun, text)
     return converted_text, replace_fun
 
-def text_format_html(text, html_span_tags, not_plain = False):
+def text_format_html(text, html_span_tags, not_plain = False,
+                     ignore_newlines = False):
     '''Formats a text body taking care of special html characters.
     not_plain means that no text will be counted in the HtmlPart.true_text
     attribute.'''
@@ -315,21 +327,33 @@ def text_format_html(text, html_span_tags, not_plain = False):
         return ''
     tag_st, tag_end = html_span_tags
     html_list = [HtmlPart(tag_st, '', '')]
-        
+    
     if text[0] == '\n':
         add_html = ''.join(PARAGRAPH_SPAN[::-1])
-        add_plain = '' if not_plain else text[0]
-        html_list.append(HtmlPart(add_html, add_plain, text[0]))
+        add_plain = '' if not_plain or ignore_newlines else text[0]
+        html_list.append(HtmlPart(add_html, add_plain, 
+                                  '' if ignore_newlines else text[0]))
         text = text[1:]
         
     add_end = None
     if text and text[-1] == '\n':
         add_end = True 
         end_html = ''.join(PARAGRAPH_SPAN[::-1])
-        end_plain = '' if not_plain else text[-1]
+        end_plain = text[-1]
         text = text[:-1]
     
-    converted_text, replace_fun  = get_html_converted_and_subfun(text)
+    if ignore_newlines == True:
+        # alter the str_replace_list to delete new lines
+        # This is used when converting FROM html to text -- any newlines are
+        # characters that shouldn't be there.
+        my_replace_list = html_replace_list[:]
+        my_replace_list.pop([n[0] for n in html_replace_str_list].index('\n'))
+        my_replace_list.append((re.compile('\n'), ''))
+    else:
+        my_replace_list = html_replace_list
+        
+    converted_text, replace_fun  = get_html_converted_and_subfun(text,
+                                        replace_html_list = my_replace_list)
     
     subbed_regs = replace_fun.regs
     prev_reg = 0,0
@@ -347,7 +371,10 @@ def text_format_html(text, html_span_tags, not_plain = False):
         # now add own text
         add_plain = '' if not_plain else subbed[0]
         add_html = subbed[1]
-        html_list.append(HtmlPart(add_html, add_plain, subbed[0]))
+        add_visible = subbed[0]
+        if ignore_newlines and add_visible == '\n':
+            add_visible = ''
+        html_list.append(HtmlPart(add_html, add_plain, add_visible))
         
         prev_reg = reg
     if not subbed_regs:# never entered loop! No special characters = no subbed!
@@ -357,9 +384,10 @@ def text_format_html(text, html_span_tags, not_plain = False):
         html_list.append(HtmlPart(add_html, add_plain, text))
     
     if add_end:
-        add_plain = '' if not_plain else end_plain
+        add_plain = '' if not_plain or ignore_newlines else end_plain
         add_html = end_html
-        html_list.append(HtmlPart(add_html, add_plain, end_plain))
+        html_list.append(HtmlPart(add_html, add_plain, 
+                                  '' if ignore_newlines else end_plain))
     
     html_list.append(HtmlPart(tag_end, '', ''))
     
@@ -426,7 +454,7 @@ def html_process_span(bs_span, keepif, keep_plain):
     
     append_text = str(text_element) if text_element != None else ''
     html_list.extend(text_format_html(append_text, ('', ''), not_plain = 
-        not do_keep))
+        not do_keep, ignore_newlines = True))
     if text_element != None:
         out_elem = text_element
     else:
@@ -453,8 +481,8 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
             html_list.append(back)
             break
         elif type(next_el) == bs4.element.NavigableString:
-            html_list.extend(text_format_html(str(next_el), ('', ''), not_plain =
-                not keep_plain))
+            html_list.extend(text_format_html(str(next_el), ('', ''), 
+                not_plain = not keep_plain, ignore_newlines = True))
             next_el = next_el
         elif next_el.name == 'br':
             html_list.append(HtmlPart(str(next_el), '', ''))
