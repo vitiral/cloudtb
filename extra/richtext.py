@@ -82,12 +82,32 @@ html_replace_str_list = [
          # NOTE: develper must handle first and last '\n' characters 
          # when subbing!
 ]
+html_replace_str_dict = dict(html_replace_str_list)
+
 html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
     for n in html_replace_str_list]
     
-def get_str_html_formatted(html_list):
+def get_str_formated_html(html_list):
     '''get the standard string of an html_list return'''
-    return ''.join((str(n) for n in html_list))
+    return ''.join((n.html_text for n in html_list))
+
+def get_str_formated_visible(html_list):
+    return ''.join(n.visible_text for n in html_list)
+
+def get_str_formated_true(html_list):
+    return ''.join(n.true_text for n in html_list)
+
+def _check_html_text_equal(html, text):
+    '''checks if an html and text string are identitical, taking into account
+    special characters.'''
+    if html == text:
+        return True
+    try:
+        if html_replace_str_dict[text] == html:
+            return True
+    except KeyError:
+        pass
+    return False
     
 def get_position(html_list, text_position = None, html_position = None,
                  visible_position = None):
@@ -97,10 +117,13 @@ def get_position(html_list, text_position = None, html_position = None,
     text_position
     '''
     # TODO: make it do an average for selecting decorator elements.
-    if text_position == None and html_position == None:
+    check = (text_position, html_position, visible_position)
+    if iteration.is_all_type(check, None):
         raise TypeError("Must find at least one position")
-    if text_position != None and html_position != None:
+    if len([n for n in check if n != None]) > 1:
         raise TypeError("Can only find one position at a time")
+    if not html_list:
+        raise IndexError("0 length array")
     cur_html_pos, cur_text_pos, cur_vis_pos = 0, 0, 0
     prev_hpos, prev_tpos, prev_vpos = 0, 0, 0
     for textrp in html_list:
@@ -120,7 +143,7 @@ def get_position(html_list, text_position = None, html_position = None,
     # if it is inside of a visual section!!!
     if text_position != None:
         out_text_pos = text_position
-        if textrp.html_text == textrp.true_text:
+        if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # position is in a plain text part
             out_html_pos = prev_hpos + (text_position - prev_tpos)
             out_vis_pos = prev_vpos + (text_position - prev_tpos)
@@ -131,32 +154,33 @@ def get_position(html_list, text_position = None, html_position = None,
             out_html_pos = prev_hpos
             out_vis_pos = prev_vpos
         else:
-            raise ValueError("Position is outside of text length" + 
+            raise ValueError("Position is outside of text length " + 
                 str(text_position))
+    
     elif visible_position != None:
         out_vis_pos = visible_position
-        if textrp.html_text == textrp.true_text:
+        if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # It occured inside of plain text
             out_text_pos = prev_tpos + (visible_position - prev_vpos)
             out_html_pos = prev_hpos + (visible_position - prev_vpos)
-        elif texrp.html_text == texrp.visible_text:
+        elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
             # it occured inside of visible text
             out_text_pos = prev_tpos
             out_html_pos = prev_hpos + (visible_position - prev_vpos)
         elif len(textrp.html_text) > len(textrp.true_text):
             # it occured inside of an html block
             out_text_pos = prev_tpos
-            out_vis_pos = prev_vpos
+            out_html_pos = prev_vpos
         else:
-            raise ValueError("Position is outside of text length" + 
+            raise ValueError("Position is outside of text length " + 
                 str(html_position))
         
     elif html_position != None:
         out_html_pos = html_position
-        if textrp.html_text == textrp.true_text:
+        if _check_html_text_equal(textrp.html_text, textrp.true_text):
             out_text_pos = prev_tpos + (html_position - prev_hpos)
             out_vis_pos = prev_vpos + (html_position - prev_hpos)
-        elif textrp.html_text == textrp.visible_text:
+        elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
             out_text_pos = prev_tpos
             out_vis_pos = prev_vpos + (html_position - prev_hpos)
         elif textrp.html_text > textrp.true_text:
@@ -215,6 +239,11 @@ def deformat_html(html, keepif, keep_plain = True):
             html_list.extend(hlist)
         else:
             raise IOError("unrecognized element: " + next_el)
+        
+        for n in html_list:
+#            print (n.true_text, n.visible_text)
+            if '<' in n.visible_text:
+                pdb.set_trace()
         next_el = next_el.next_element
     html_list.append(HtmlPart(footer, '', ''))
     # remove empty HtmlParts
@@ -227,6 +256,10 @@ class HtmlPart(object):
     def __init__(self, html_text, true_text, visible_text):
         '''true_text is the base (non - decorative) text of RegPart
         objects'''
+        args = (html_text, true_text, visible_text)
+        types = (type(n) for n in args)
+        assert(iteration.first_index_nin(types, (unicode, str)) == None)
+        html_text, true_text, visible_text = (str(n) for n in args)
         self.html_text = html_text
         self.true_text = true_text
         self.visible_text = visible_text
@@ -242,7 +275,7 @@ class HtmlPart(object):
             return False
     
     def __bool__(self):
-        return bool(self.html_text + self.true_text)
+        return bool(self.html_text + self.true_text + self.visible_text)
         
 ''' Internal functions'''
 def get_html_span_tags(underlined = '', bold = '', color = '',
@@ -282,7 +315,7 @@ def text_format_html(text, html_span_tags, not_plain = False):
         text = text[1:]
         
     add_end = None
-    if text[-1] == '\n':
+    if text and text[-1] == '\n':
         add_end = True 
         end_html = ''.join(PARAGRAPH_SPAN[::-1])
         end_plain = '' if not_plain else text[-1]
@@ -304,7 +337,6 @@ def text_format_html(text, html_span_tags, not_plain = False):
         html_list.append(HtmlPart(add_html, add_plain, add_html))
         
         # now add own text
-        
         add_plain = '' if not_plain else subbed[0]
         add_html = subbed[1]
         html_list.append(HtmlPart(add_html, add_plain, subbed[0]))
@@ -380,7 +412,7 @@ def html_process_span(bs_span, keepif, keep_plain):
                              HtmlPart(span_back, '', ''))
     html_list = [span_front]
     
-    append_text = text_element if text_element != None else ''
+    append_text = str(text_element) if text_element != None else ''
     html_list.extend(text_format_html(append_text, ('', ''), not_plain = 
         not do_keep))
     if text_element != None:
@@ -395,7 +427,6 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
     body, fback = get_named_body_frontback(str(bs_paragraph), 'p')
     front, back = fback; del fback
     front = HtmlPart(front, '', '')
-    # TODO: keep plain for paragraphs? I feel like I might be missing something
     back = HtmlPart(back, '\n', '\n')
     
     html_list = [front]
@@ -413,6 +444,8 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
             html_list.extend(text_format_html(str(next_el), ('', ''), not_plain =
                 not keep_plain))
             next_el = next_el
+        elif next_el.name == 'br':
+            html_list.append(HtmlPart(str(next_el), '', ''))
         else:
             assert(next_el.name == 'span')
             next_el, hlist = html_process_span(next_el, keepif, keep_plain)

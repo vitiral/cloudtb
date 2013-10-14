@@ -550,14 +550,13 @@ def is_all_type(data_list, dtype, start = 0, stop = None):
         return False
     except StopIteration:
         return True
-                
 
 def special_figt(data_list, value, start = 0, stop = None):
     index = first_index_gt(data_list, value, start, stop)
     if data_list[index + 1] > value:
         return index + start
     else:
-        return - 1
+        return None
 
 def first_index_gt(data_list, value, start = 0, stop = None):
     '''return the first index greater than value from a given list like object'''
@@ -565,7 +564,7 @@ def first_index_gt(data_list, value, start = 0, stop = None):
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] > value)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 def first_index_gtet(data_list, value, start = 0, stop = None):
     '''return the first index greater than value from a given list like object'''
@@ -573,7 +572,7 @@ def first_index_gtet(data_list, value, start = 0, stop = None):
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] >= value)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 def first_index_lt(data_list, value, start = 0, stop = None):
     '''return the first index less than value from a given list like object'''
@@ -581,7 +580,7 @@ def first_index_lt(data_list, value, start = 0, stop = None):
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] < value)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 def first_index_ne(data_list, value, start = 0, stop = None):
     '''returns first index not equal to the value from list'''
@@ -589,7 +588,7 @@ def first_index_ne(data_list, value, start = 0, stop = None):
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] != value)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 def first_index_et(data_list, value, start = 0, stop = None):
     '''same as data_list.index(value), except with exception handling (returns
@@ -607,7 +606,7 @@ def first_index_et(data_list, value, start = 0, stop = None):
         else:
             return next(data[0] for data in
             enumerate(data_list) if data[1] == value) + start
-    except (ValueError, StopIteration): return - 1
+    except (ValueError, StopIteration): return None
 
 def first_index_in(data_list, in_set, start = 0, stop = None):
     '''finds the first index that is in a given set of any iterator'''
@@ -616,7 +615,7 @@ def first_index_in(data_list, in_set, start = 0, stop = None):
         index = next(data[0] for data in enumerate(data_list) if 
             data[1] in in_set)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 def first_index_nin(data_list, notin_set, start = 0, stop = None):
     '''finds the first index that is not in a given set of any iterator'''
@@ -625,7 +624,7 @@ def first_index_nin(data_list, notin_set, start = 0, stop = None):
         index = next(data[0] for data in enumerate(data_list) if 
             data[1] not in notin_set)
         return index + start
-    except StopIteration: return - 1
+    except StopIteration: return None
 
 '''Numpy only functions
 These functions can only be used with numpy

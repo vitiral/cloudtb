@@ -52,7 +52,7 @@ def format_re_search(list_data, pretty = False):
 
 def get_orig_researched(re_searched):
     '''get original text'''
-    return ''.join((n if type(n) == str else n.text for n in re_searched))
+    return ''.join((n if type(n) in (str, unicode) else n.text for n in re_searched))
 
 def get_str_researched(re_searched):
     '''returns the origional string if replace has not been called,
@@ -582,7 +582,7 @@ if __name__ == '__main__':
     import pdb
     from extra.researched_richtext import re_search_format_html
     from extra.richtext import get_position, deformat_html
-    from extra.richtext import get_str_html_formatted    
+    from extra.richtext import get_str_formated_html
     
     global out, text, true_position
     text = '''talking about expecting the Spanish Inquisition in the text below: 
@@ -596,14 +596,14 @@ if __name__ == '__main__':
     print text[10:30]
 #    pdb.set_trace()
     out =  re_search_format_html(researched)
-    out_str = get_str_html_formatted(out)
+    out_str = get_str_formated_html(out)
 #    pos = get_position(out, 10)
 #    print out_str[pos: pos + 50]
     from bs4 import BeautifulSoup
     global soup, el, htp
     
     htp = deformat_html(out_str, {'font-weight':'600', 'color':'#000000'})
-    hform = get_str_html_formatted(htp)    
+    hform = get_str_formated_html(htp)    
     soup = BeautifulSoup(hform)    
     print soup.prettify()
     
