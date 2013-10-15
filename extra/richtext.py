@@ -84,12 +84,6 @@ html_replace_str_list = [
          # NOTE: develper must handle first and last '\n' characters 
          # when subbing!
 
-# oK, I can solve the code formating problem simply
-# getpos needs to return the index of the last HtmlPart and the
-# relative index where pos is.
-# Then I just find where the strings differ next(n[0] for n in enumerate(text) if n[1] != text2[n[0]])
-# and finally how much (len(text) - len(text2))
-# then I go through the parts and replace the true text with the visible text
 html_replace_str_dict = dict(html_replace_str_list)
 
 html_replace_list = [(textools.convert_to_regexp(n[0], compile = True), n[1]) 
@@ -105,6 +99,10 @@ def get_str_formated_visible(html_list):
 def get_str_formated_true(html_list):
     return ''.join(n.true_text for n in html_list)
 
+def get_str_plain_html(text):
+    html_list = text_format_html(text, (HEADER, FOOTER))
+    return get_str_formated_html(html_list)
+
 def _check_html_text_equal(html, text):
     '''checks if an html and text string are identitical, taking into account
     special characters.'''
@@ -116,13 +114,22 @@ def _check_html_text_equal(html, text):
     except KeyError:
         pass
     return False
-    
+
+def _get_text_positions(html_list, hpart_index, hpart_relpos, len_text):
+    '''A more advanced function that can take the ouputs from get_position
+    and reconstruct any text between some posiions'''
+    pass
+
 def get_position(html_list, text_position = None, html_position = None,
-                 visible_position = None):
+                 visible_position = None, return_list_index = None):
     '''given either a text position or html position, return the other
     position
     For instance, if you give the html_position, you will recieve the 
     text_position
+    
+    if return_list_index == True it returns:
+        (text_pos, html_pos, vis_pos), (html_list_object_index, relative_index)
+    Where relative index is the index of the data inside the list object
     '''
     # TODO: make it do an average for selecting decorator elements.
     check = (text_position, html_position, visible_position)
@@ -134,7 +141,7 @@ def get_position(html_list, text_position = None, html_position = None,
         raise IndexError("0 length array")
     cur_html_pos, cur_text_pos, cur_vis_pos = 0, 0, 0
     prev_hpos, prev_tpos, prev_vpos = 0, 0, 0
-    for textrp in html_list:
+    for index, textrp in enumerate(html_list):
         cur_html_pos += len(textrp.html_text)
         cur_text_pos += len(textrp.true_text)
         cur_vis_pos  += len(textrp.visible_text)
@@ -151,10 +158,11 @@ def get_position(html_list, text_position = None, html_position = None,
     # if it is inside of a visual section!!!
     if text_position != None:
         out_text_pos = text_position
+        relative_pos = text_position - prev_tpos
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # position is in a plain text part
-            out_html_pos = prev_hpos + (text_position - prev_tpos)
-            out_vis_pos = prev_vpos + (text_position - prev_tpos)
+            out_html_pos = prev_hpos + relative_pos
+            out_vis_pos = prev_vpos + relative_pos
 #        elif textrp.html_text == textrp.visible_text: # same as above
         elif textrp.html_text > textrp.true_text:
             # position is inside of html, choose position before. This
@@ -167,14 +175,15 @@ def get_position(html_list, text_position = None, html_position = None,
     
     elif visible_position != None:
         out_vis_pos = visible_position
+        relative_pos = (visible_position - prev_vpos)
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # It occured inside of plain text
-            out_text_pos = prev_tpos + (visible_position - prev_vpos)
-            out_html_pos = prev_hpos + (visible_position - prev_vpos)
+            out_text_pos = prev_tpos + relative_pos
+            out_html_pos = prev_hpos + relative_pos
         elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
             # it occured inside of visible text
             out_text_pos = prev_tpos
-            out_html_pos = prev_hpos + (visible_position - prev_vpos)
+            out_html_pos = prev_hpos + relative_pos
         elif len(textrp.html_text) > len(textrp.true_text):
             # it occured inside of an html block
             out_text_pos = prev_tpos
@@ -184,13 +193,14 @@ def get_position(html_list, text_position = None, html_position = None,
                 str(html_position))
         
     elif html_position != None:
-        out_html_pos = html_position
+        out_html_pos = html_position - prev_hpos
+        relative_pos = html_position - prev_hpos
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
-            out_text_pos = prev_tpos + (html_position - prev_hpos)
-            out_vis_pos = prev_vpos + (html_position - prev_hpos)
+            out_text_pos = prev_tpos + relative_pos
+            out_vis_pos = prev_vpos + relative_pos
         elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
             out_text_pos = prev_tpos
-            out_vis_pos = prev_vpos + (html_position - prev_hpos)
+            out_vis_pos = prev_vpos + relative_pos
         elif textrp.html_text > textrp.true_text:
             out_text_pos = prev_tpos
             out_vis_pos = prev_vpos
@@ -201,8 +211,11 @@ def get_position(html_list, text_position = None, html_position = None,
 
     assert (out_text_pos <= out_vis_pos <= out_html_pos)
     
-    return out_text_pos, out_vis_pos, out_html_pos
-
+    if not return_list_index:    
+        return out_text_pos, out_vis_pos, out_html_pos
+    else:
+        pos_tup = out_text_pos, out_vis_pos, out_html_pos
+        return pos_tup, (index, relative_pos)
 
 class COLOR:
     RED =   get_color_str(255,  0,      0)
@@ -237,8 +250,11 @@ def deformat_html(html, keepif, keep_plain = True):
     bsoup = bs4.BeautifulSoup(html)
     next_el = bsoup.body.next_element
     html_list = [HtmlPart(header, '', '')]
+    i = -1
     while next_el != None:
+        i += 1
         if type(next_el) == bs4.element.NavigableString:
+            print 'Is String'
             # at first I was kind of upset that bsoup couldn't give
             # me the raw html. Then I realized that I can just use
             # my own function to get it... and everything else!
@@ -246,20 +262,23 @@ def deformat_html(html, keepif, keep_plain = True):
                 not_plain = not keep_plain, ignore_newlines = True))
         
         elif next_el.name == 'span':
+            print 'Is span'
             next_el, hlist = html_process_span(next_el, keepif, keep_plain)
             html_list.extend(hlist)
             
         elif next_el.name == 'p':
+            print 'Is paragraph'
             next_el, hlist = html_process_paragraph(next_el, keepif, 
                                                     keep_plain)
             html_list.extend(hlist)
         else:
             raise IOError("unrecognized element: " + next_el)
         
-        for n in html_list:
-#            print (n.true_text, n.visible_text)
-            if '<' in n.visible_text:
-                pdb.set_trace()
+#        for i, n in enumerate(html_list):
+#            if '<' in n.visible_text:
+#                pdb.set_trace()
+#            if '\n' in n.visible_text or '\n' in n.true_text:
+#                pdb.set_trace()
         next_el = next_el.next_element
     html_list.append(HtmlPart(footer, '', ''))
     # remove empty HtmlParts
@@ -280,8 +299,9 @@ class HtmlPart(object):
         self.true_text = true_text
         self.visible_text = visible_text
     
-    def __str__(self):
-        return self.html_text
+    def __repr__(self):
+        return '<Html Part {0}>'.format((self.html_text[:15], 
+                  self.true_text, self.visible_text))
     
     def __eq__(self, other):
         if (self.html_text == other.html_text) and (self.true_text == 
@@ -374,14 +394,24 @@ def text_format_html(text, html_span_tags, not_plain = False,
         add_visible = subbed[0]
         if ignore_newlines and add_visible == '\n':
             add_visible = ''
+            add_plain = ''
+        if ignore_newlines:
+            assert('\n' not in add_visible)
+        
         html_list.append(HtmlPart(add_html, add_plain, add_visible))
         
         prev_reg = reg
     if not subbed_regs:# never entered loop! No special characters = no subbed!
         assert(converted_text == text)
+        assert('\n' not in text)
         add_plain = '' if not_plain else text
         add_html = text
         html_list.append(HtmlPart(add_html, add_plain, text))
+    else:
+        # do final cleanup, add text that wasn't added
+        final_text = text[subbed_regs[-1][1]:]
+        add_plain = '' if not_plain else final_text
+        html_list.append(HtmlPart(final_text, add_plain, final_text))
     
     if add_end:
         add_plain = '' if not_plain or ignore_newlines else end_plain
@@ -391,6 +421,9 @@ def text_format_html(text, html_span_tags, not_plain = False,
     
     html_list.append(HtmlPart(tag_end, '', ''))
     
+    if ignore_newlines:
+        for n in html_list:
+            assert('\n' not in n.true_text and '\n' not in n.visible_text)
     return html_list
 
 BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
@@ -466,8 +499,24 @@ def html_process_span(bs_span, keepif, keep_plain):
 def html_process_paragraph(bs_paragraph, keepif, keep_plain):
     body, fback = get_named_body_frontback(str(bs_paragraph), 'p')
     front, back = fback; del fback
+    style = bs_paragraph.attrs['style']
+    style_attrs = get_style_attributes(style)
+    no_newline = False    
+    try:
+        # Apparently there is such a thing as an "empty paragraph" that
+        # doesn't trigger a line ending! What an annoying "feature"
+        if style_attrs['-qt-paragraph-type'] == 'empty':
+            no_newline = True
+    except KeyError:
+        pass
     front = HtmlPart(front, '', '')
-    back = HtmlPart(back, '\n', '\n')
+    
+    
+#    -qt-paragraph-type:empty
+    if no_newline:
+        back = HtmlPart(back, '', '')
+    else:
+        back = HtmlPart(back, '\n', '\n')
     
     html_list = [front]
     prev_el = bs_paragraph; del bs_paragraph
@@ -478,7 +527,6 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
             next_el == None or next_el.name == 'p'):
             # next element is another paragraph! (or end of body)
             out_el = prev_el
-            html_list.append(back)
             break
         elif type(next_el) == bs4.element.NavigableString:
             html_list.extend(text_format_html(str(next_el), ('', ''), 

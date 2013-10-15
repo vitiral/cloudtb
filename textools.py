@@ -161,19 +161,20 @@ def _re_search_yield(regexp, text, start = 0, end = None,
     count = 0
     prev_stop = stop
     while stop < absolute_end:
-        count += 1
-        if count > absolute_end:
-            assert(0)   # prevent infinite loop -- This happened to me and
-                        # re_search kept building an infinite tuple.
-                        # It ended up consuming almost a gig of memory and
-                        # nearly crashed my computer!  Haha, goodtimes
-        
         searched = regexp.search(text, stop, absolute_end)
         
         if searched == None:
 #            if not data_list:   # no match found
 #r              return 
             break
+
+        count += 1
+        if count > absolute_end:
+            assert(0)   # prevent infinite loop -- This happened to me and
+                        # re_search kept building an infinite tuple.
+                        # It ended up consuming almost a gig of memory and
+                        # nearly crashed my computer!  Haha, goodtimes
+            
         regs = searched.regs
         # overriding a very annoying feature of the re module where somehow
         # these can be different things depending on how the match turns out
@@ -194,6 +195,10 @@ def _re_search_yield(regexp, text, start = 0, end = None,
         txt = text[prev_stop:start]
         if txt != '':
             yield txt
+        if start == stop:
+            # Empty match
+            stop += 1
+            continue
         
         index = iteration.first_index_ne(groups, None)
         new_RegGroupPart = RegGroupPart(groups, index, 
