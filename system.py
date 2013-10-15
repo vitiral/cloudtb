@@ -151,8 +151,10 @@ def safe_eval(eval_str, variable_dict = None):
     return eval(eval_str, {"__builtins__" : None}, variable_dict)
 
 def get_user_directory():
-    return os.environ['USERPROFILE']
-
+    try:
+        return os.environ['USERPROFILE']
+    except KeyError:
+        return os.environ['HOME']
 
 def std_strf_time():
     '''Gets a standard datetime string'''

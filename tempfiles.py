@@ -35,6 +35,8 @@ type will automatically store it's variable if it hasn't been used in a while.
 
 It uses the threading module after the first call of get_temp_file. If your
 applicationc cannot support threading, then:
+    Define your own THREAD_LOCK object to handle locking, make sure to set
+        the global variable to the object you are using.
     set THREAD_HANDLED = True
     call create_temp_directory
     call THREAD_manage_harddata about every .5 seconds
@@ -54,6 +56,7 @@ import system
 import textools
 
 THREAD_HANDLED = False
+THREAD_LOCK = None          
 THREAD_PERIOD = 30 # How often the therad runs in seconds
 DELETE_TMP_AFTER = 60*60    # deletes unupdated temporary files if their
                             # timer file is not updated in an hour
@@ -82,8 +85,12 @@ def get_temp_file():
                      dir = TEMP_DIRECTORY)
 
 def create_harddata_thread():
-    assert(not THREAD_HANDLED)
     global THREAD_harddata
+    global THREAD_lock
+    global THREAD_HANDLED
+    
+    assert(not THREAD_HANDLED)
+    
     from errors import ModuleError
     try:
         THREAD_harddata
@@ -91,12 +98,13 @@ def create_harddata_thread():
     except NameError:
         pass
 
-    from threading import Thread
+    from threading import Thread, Lock
     
     class harddata_thread(Thread):
-        def __init__(self, harddata):
+        def __init__(self, harddata, lock):
             print "intializing thread"
             self.harddata = harddata
+            self.lock = lock
             Thread.__init__(self)
             
         def run(self):
@@ -109,10 +117,12 @@ def create_harddata_thread():
                     # TODO: change this to logging. Here for debug
                     assert(0)
                 else:
+                    print 'thread sleeping'
                     time.sleep(self.last_run - start_time)
                 
-        
-    THREAD_harddata = harddata_thread(_HARDDATA)
+                
+    THREAD_lock = Lock()
+    THREAD_harddata = harddata_thread(_HARDDATA, THREAD_lock)
     THREAD_HANDLED = True
     THREAD_harddata.run()
 
@@ -127,9 +137,11 @@ def create_temp_directory():
         create_harddata_thread()
 
 def THREAD_manage_harddata():
+    THREAD_LOCK.acquire()
     for hd in _HARDDATA:
         hd._check(time.time())
     _manage_temp_dirs()
+    THREAD_LOCK.release()
     
 def _manage_temp_dirs():
     update_timer_file()

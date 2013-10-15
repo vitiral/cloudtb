@@ -17,29 +17,30 @@ class StdWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super(StdWidget, self).__init__(parent)
 
-    def save_settings(self):
-        '''returns the name and current settings dict to be saved
-        by the application
+    def save_settings(self, application_settings):
+        '''Puts own settings into the application_settings dict
         
-        This function is to-be extended by the parent class. It returns
-        a dict of settings that have been gotten and a dict of
-        settings that still need to be gotten.
+        This function is to-be extended by the parent class.
+        It retuturns a dict of settings that still need to be gotten.
         
         All upper level functions should return the same thing -- the highest
         level function does error checking by ensuring that bool(need_settings)
             == False
         '''
-        return_settings = {}
+        assert(self._NAME_ not in application_settings)
+        settings = {}
+        application_settings[self._NAME_] = settings
+
         need_settings = {}
         # save settings that can be proccessed.
         for key, value in self.std_settings.iteritems():
             getexec, setexec = key
             getval, setval = value
             if getval == None:
-                need_settings[getexec] = getval
+                need_settings[key] = getval
             else:
-                return_settings[getexec] = eval(getexec.format('self'))
-        return return_settings, need_settings
+                settings[key] = eval(getexec.format('self'))
+        return need_settings
         
     def load_settings(self, application_settings):
         '''Load settings given the previous settings from the 
@@ -71,15 +72,9 @@ class StdWidget(QtGui.QWidget):
             getval, setval = item
 
             if setval == None:
-                need_settings[setexec] = setval
+                need_settings[key] = setval
             else:
-                try:
-                    exec(setexec.format(n=setval))
-                except SyntaxError as E:
-                    error = ("Syntax Error in loading: ", 
-                        setexec.format(n=setval))
-                    log(ERROR, error)
-                    raise E
+                exec(setexec.format(n=setval))
             
         # return settings that still need to be loaded in -- 
         #  to be used in parent

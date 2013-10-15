@@ -120,45 +120,45 @@ def _get_text_positions(html_list, hpart_index, hpart_relpos, len_text):
     and reconstruct any text between some posiions'''
     pass
 
-def get_position(html_list, text_position = None, html_position = None,
+def get_position(html_list, true_position = None, html_position = None,
                  visible_position = None, return_list_index = None):
     '''given either a text position or html position, return the other
     position
     For instance, if you give the html_position, you will recieve the 
-    text_position
+    true_position
     
     if return_list_index == True it returns:
-        (text_pos, html_pos, vis_pos), (html_list_object_index, relative_index)
+        (true_pos, html_pos, vis_pos), (html_list_object_index, relative_index)
     Where relative index is the index of the data inside the list object
     '''
     # TODO: make it do an average for selecting decorator elements.
-    check = (text_position, html_position, visible_position)
+    check = (true_position, html_position, visible_position)
     if iteration.is_all_type(check, None):
         raise TypeError("Must find at least one position")
     if len([n for n in check if n != None]) > 1:
         raise TypeError("Can only find one position at a time")
     if not html_list:
         raise IndexError("0 length array")
-    cur_html_pos, cur_text_pos, cur_vis_pos = 0, 0, 0
+    cur_html_pos, cur_true_pos, cur_vis_pos = 0, 0, 0
     prev_hpos, prev_tpos, prev_vpos = 0, 0, 0
     for index, textrp in enumerate(html_list):
         cur_html_pos += len(textrp.html_text)
-        cur_text_pos += len(textrp.true_text)
+        cur_true_pos += len(textrp.true_text)
         cur_vis_pos  += len(textrp.visible_text)
-        if text_position != None and cur_text_pos> text_position:
+        if true_position != None and cur_true_pos> true_position:
             break
         elif html_position != None and cur_html_pos > html_position:
             break
         elif visible_position != None and cur_vis_pos > visible_position:
             break
-        prev_hpos, prev_tpos, prev_vpos = (cur_html_pos, cur_text_pos, 
+        prev_hpos, prev_tpos, prev_vpos = (cur_html_pos, cur_true_pos, 
                                            cur_vis_pos)
     
     # going to take a bit more work -- for visual I need to ALSO figure out
     # if it is inside of a visual section!!!
-    if text_position != None:
-        out_text_pos = text_position
-        relative_pos = text_position - prev_tpos
+    if true_position != None:
+        out_true_pos = true_position
+        relative_pos = true_position - prev_tpos
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # position is in a plain text part
             out_html_pos = prev_hpos + relative_pos
@@ -171,22 +171,22 @@ def get_position(html_list, text_position = None, html_position = None,
             out_vis_pos = prev_vpos
         else:
             raise ValueError("Position is outside of text length " + 
-                str(text_position))
+                str(true_position))
     
     elif visible_position != None:
         out_vis_pos = visible_position
         relative_pos = (visible_position - prev_vpos)
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
             # It occured inside of plain text
-            out_text_pos = prev_tpos + relative_pos
+            out_true_pos = prev_tpos + relative_pos
             out_html_pos = prev_hpos + relative_pos
         elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
             # it occured inside of visible text
-            out_text_pos = prev_tpos
+            out_true_pos = prev_tpos
             out_html_pos = prev_hpos + relative_pos
         elif len(textrp.html_text) > len(textrp.true_text):
             # it occured inside of an html block
-            out_text_pos = prev_tpos
+            out_true_pos = prev_tpos
             out_html_pos = prev_vpos
         else:
             raise ValueError("Position is outside of text length " + 
@@ -196,25 +196,25 @@ def get_position(html_list, text_position = None, html_position = None,
         out_html_pos = html_position - prev_hpos
         relative_pos = html_position - prev_hpos
         if _check_html_text_equal(textrp.html_text, textrp.true_text):
-            out_text_pos = prev_tpos + relative_pos
+            out_true_pos = prev_tpos + relative_pos
             out_vis_pos = prev_vpos + relative_pos
         elif _check_html_text_equal(textrp.html_text, textrp.visible_text):
-            out_text_pos = prev_tpos
+            out_true_pos = prev_tpos
             out_vis_pos = prev_vpos + relative_pos
         elif textrp.html_text > textrp.true_text:
-            out_text_pos = prev_tpos
+            out_true_pos = prev_tpos
             out_vis_pos = prev_vpos
         else:
             raise ValueError("Position is outside of text length" + 
                 str(html_position))
     else: assert(False)    
 
-    assert (out_text_pos <= out_vis_pos <= out_html_pos)
+    assert (out_true_pos <= out_vis_pos <= out_html_pos)
     
     if not return_list_index:    
-        return out_text_pos, out_vis_pos, out_html_pos
+        return out_true_pos, out_vis_pos, out_html_pos
     else:
-        pos_tup = out_text_pos, out_vis_pos, out_html_pos
+        pos_tup = out_true_pos, out_vis_pos, out_html_pos
         return pos_tup, (index, relative_pos)
 
 class COLOR:
@@ -282,7 +282,7 @@ def deformat_html(html, keepif, keep_plain = True):
         next_el = next_el.next_element
     html_list.append(HtmlPart(footer, '', ''))
     # remove empty HtmlParts
-    html_list = (n for n in html_list if bool(n))
+    html_list = (n for n in html_list if n.bool())
     return tuple(html_list)
 
 class HtmlPart(object):
@@ -310,7 +310,7 @@ class HtmlPart(object):
         else:
             return False
     
-    def __bool__(self):
+    def bool(self):
         return bool(self.html_text + self.true_text + self.visible_text)
         
 ''' Internal functions'''
