@@ -254,7 +254,7 @@ def deformat_html(html, keepif, keep_plain = True):
     while next_el != None:
         i += 1
         if type(next_el) == bs4.element.NavigableString:
-            print 'Is String'
+            # print 'Is String'
             # at first I was kind of upset that bsoup couldn't give
             # me the raw html. Then I realized that I can just use
             # my own function to get it... and everything else!
@@ -262,12 +262,12 @@ def deformat_html(html, keepif, keep_plain = True):
                 not_plain = not keep_plain, ignore_newlines = True))
         
         elif next_el.name == 'span':
-            print 'Is span'
+            # print 'Is span'
             next_el, hlist = html_process_span(next_el, keepif, keep_plain)
             html_list.extend(hlist)
             
         elif next_el.name == 'p':
-            print 'Is paragraph'
+            # print 'Is paragraph'
             next_el, hlist = html_process_paragraph(next_el, keepif, 
                                                     keep_plain)
             html_list.extend(hlist)
