@@ -81,59 +81,6 @@ def get_line(text, position, start = 0):
         raise IndexError("position is outside of bounds of text")
     return line - 1
 
-def get_match_paths(folder_path, 
-                    file_regexp = None, text_regexp = None, 
-                    recurse = True, 
-                    max_len_searched = None,
-                    watchers = None):
-    '''UNDER_DEVELOPMENT
-    get the file paths in a folder that have text which matches
-    the regular expression.
-    Watchers should be a list of watchers to be called on each new file name
-    '''
-    if (file_regexp, text_regexp) == (None, None):
-        raise ValueError('Must specify at least one regex!')
-    if file_regexp != None:
-        if type(file_regexp) in (str, unicode):
-            file_regexp = re.compile(file_regexp)
-        file_fnd = file_regexp.finditer
-    if text_regexp != None:
-        if type(text_regexp) in (str, unicode):
-            text_regexp = re.compile(text_regexp)
-        text_fnd = text_regexp.finditer
-        
-    folder_path = os.path.abspath(folder_path)
-    
-    fpaths = []
-    for fname in os.listdir(folder_path):
-        path = os.path.join(folder_path, fname)
-        if watchers:
-            [w(path) for w in watchers]
-
-        if os.path.isdir(path):
-            fpaths.extend(get_match_paths(folder_path,
-                file_regexp, text_regexp, recurse, 
-                max_len_searched))
-
-        if file_regexp:
-            try:
-                next(file_fnd(fname))
-            except StopIteration:
-                continue
-        
-        if text_regexp:
-            with open(path) as f:
-                #TODO: check if file is a text file
-                try:
-                    next(text_fnd(f.read(), 0, max_len_searched))
-                    fpaths.append(path)
-                except StopIteration:
-                    continue
-        else:
-            fpaths.append(path)
-    
-    return fpaths
-
 def _re_search_yield(regexp, text, start = 0, end = None, 
                      matches = None):
     '''Internal implementation of re_search that allows for iteration. Use

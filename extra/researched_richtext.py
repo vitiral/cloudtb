@@ -28,24 +28,129 @@
 # -*- coding: utf-8 -*-
 
 import pdb
+import sys, os
+import itertools
+import re
+import commands
+
 from guitools import get_color_from_index, get_color_str
 
 from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags, 
                       text_format_html, HtmlPart)
+
+import iterators, textools
 
 def re_search_format_html(data_list, show_tags_on_replace = False):
     html_list = [HtmlPart(HEADER, '', '')]
 
     for data in data_list:
         if type(data) == str:
-            html_list.extend(text_format_html(data, html_span_std))
+            text_html = text_format_html(data, html_span_std)
+            for tp in text_html:
+                tp.regpart = None
+            html_list.extend(text_html)
         else:
-            html_list.extend(_regpart_format_html(data,
-                show_tags_on_replace = show_tags_on_replace))
+            regpart_html = _regpart_format_html(data,
+                show_tags_on_replace = show_tags_on_replace)
+            html_list.extend(regpart_html)
     html_list.append(HtmlPart(FOOTER, '', ''))
     html_list = tuple(n for n in html_list if bool(n))
     return html_list
 
+def _reduce_match_paths(folder_path,
+                        file_regexp, text_regexp,
+                        recurse,
+                        max_len_searched):
+    '''Uses standard operating system tools to reduce the number of files
+    we need to search as much as possible'''
+    # first we are going to break the file_regexp up into text parts 
+    
+def get_match_paths(folder_path, 
+                    file_regexp = None, text_regexp = None, 
+                    recurse = True, 
+                    max_len_searched = None,
+                    watchers = None):
+    '''
+    get the file paths in a folder that have text which matches
+    the regular expression. Returns [(full_file_path, iter(re_searched_data), 
+        incomplete_matches), ...]
+    To actually get the data and matches, convert to tuple.
+    
+    Watchers should be a list of watchers to be called on each new file name
+    '''
+    if (file_regexp, text_regexp) == (None, None):
+        raise ValueError('Must specify at least one regex!')
+    if file_regexp != None:
+        if type(file_regexp) in (str, unicode):
+            file_regexp_cmp = re.compile(file_regexp)
+        file_fnd = file_regexp.finditer
+    if text_regexp != None:
+        if type(text_regexp) in (str, unicode):
+            text_regexp_cmp = re.compile(text_regexp)
+        text_fnd = text_regexp.finditer
+    
+    
+    folder_path = os.path.abspath(folder_path)
+    
+    fpaths = []
+    for fname in os.listdir(folder_path):
+        path = os.path.join(folder_path, fname)
+        if watchers:
+            [w(path) for w in watchers]
+
+        if os.path.isdir(path):
+            fpaths.extend(get_match_paths(folder_path,
+                file_regexp, text_regexp, recurse, 
+                max_len_searched))
+
+        if file_regexp:
+            try:
+                next(file_fnd(fname))
+            except StopIteration:
+                continue
+        
+        if text_regexp:
+            with open(path) as f:
+                # Ok, what I think I am going to do is break up the regexp
+                    # and then grep the result.
+                #TODO: check if file is a text file
+                text = f.read()
+                try:
+                    next(text_fnd(text, 0, max_len_searched))
+                except StopIteration:
+                    continue
+                else:
+                    matches = []
+                    researched = textools.re_search(file_regexp, 
+                        text, start = 0, end = max_len_searched, 
+                        return_matches = matches, 
+                        return_type = iter)
+                    fpaths.append((path, researched, matches))
+        else:
+            fpaths.append(path)
+    return fpaths
+
+def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
+    '''Given the regpart that you changed, reformat the html_list with
+    the new regpart replaced.'''
+    assert(regpart != None)
+    hiter = (n.regpart for n in html_list)
+    
+    index_start = iterators.first_index_is(hiter, regpart)
+    if index_start == None:
+        raise ValueError("regpart not found")
+    index_end = iterators.first_index_isn(hiter, regpart)
+    if index_end == None:
+        index_end = index_start
+    else:
+        index_end = index_start + index_end
+    
+    new_html_section = _regpart_format_html(regpart, show_tags_on_replace=
+            show_tags_on_replace)
+            
+    return tuple(itertools.chain(html_list[:index_start], new_html_section,
+                html_list[index_end:]))
+    
 def _regpart_format_html(regpart, show_tags_on_replace = False):
     '''Formats a reg_part'''
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
@@ -109,4 +214,22 @@ def _regpart_format_html(regpart, show_tags_on_replace = False):
             get_html_span_tags(bold = True, color = repl_color,
             underlined = True), not_plain = True))
     
+    for rp in regpart_html:
+        rp.regpart = data
     return html_list
+
+    
+class RegExpBuilder(object):
+    '''This class is meant to make it simple to build regular expressions by
+    just setting single variables
+    Right now it's super simple and can just match the start, end,
+    and any text in the middle of a word or phrase'''
+    MatchType = dict((n[1],n[0]) for n in enumerate(
+        ('word', 'phrase', 'text body')))
+    def __init__(self):
+        s = self        
+        s.start = None
+        s.end = None
+        s.middle = None
+    
+            

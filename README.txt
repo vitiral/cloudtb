@@ -36,3 +36,10 @@ All of these modules are located in the folder "external"
 
 Every other function can be copied, reused, re-distributed, or anything else that anyone
 wants with no attribution necessary. For more details see the license.
+
+
+
+
+# TODO:
+- refactor code to rename textools -> retools
+- researched_richtext -> retools_extra

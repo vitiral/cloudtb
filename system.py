@@ -38,6 +38,9 @@ Some on useful modules not included:
     - the module tempfile with gettempdir
 
 '''
+
+def guess_is_acii_text(path, ext):
+    
     
 def is_file_ext(path, ext):
     n, fext = os.path.splitext(path)

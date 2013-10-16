@@ -4,4 +4,5 @@
 !*.tex
 !*.ui
 !extra/
+!extra/PyQt
 !external/

@@ -122,6 +122,13 @@ def test_slice_repeat(self, reobject = False):
     self.assertIterEqual(a1, b1)
 
 @dectools.debug(DEBUG)
+def test_backward_slice(self):
+    a1 = range(-100, 1000)
+    b1 = self.get_object(a1)
+    start, stop, step = 1000, -100, -30
+    self.assertIterEqual(a1[start:stop:step], b1[start:stop:step])
+    
+@dectools.debug(DEBUG)
 def test_getitem(self, recreate = True):
     a1 = range(-100, 1000)
     b1 = self.get_object(a1)
@@ -166,6 +173,27 @@ class soliditerTest(unittest.TestCase, std_iterator):
     
     def test_getitem(self):
         return test_getitem(self, recreate = False)
+
+class fiTests(unittest.TestCase):
+    def setUp(self):
+        self.a1 = range(-1000, 1000)
+        self.aempty = (0,)*1000
+
+    def testForward(self):
+        for i, n in enumerate(self.a1[::33]):
+            i*=33
+            self.assertEqual(i, iteration.first_index_et(self.a1, n))
+            self.assertEqual(i, iteration.first_index_is(self.a1, n))
+            self.assertEqual(i, iteration.first_index_in(self.a1, (n,'other', 
+                                                          len(self.a1) + 10)))
+        
+        i = 500
+        empt = list(self.aempty)
+        empt[453] = 453
+        self.assertEqual(453, iteration.first_index_ne(empt, 0))
+        self.assertEqual(453, iteration.first_index_nis(empt, 0))
+        self.assertEqual(453, iteration.first_index_nin(empt, (0,10,200)))
     
 if __name__ == '__main__':
     unittest.main()        
+    

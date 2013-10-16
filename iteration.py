@@ -525,6 +525,14 @@ def find_depth(value):
     else:
         return 1, value
 
+def bslice(data, *args, **kwargs):
+    '''returns an iterator that can slice backwards.
+    IMPORTANT: uses the data's __getitem__ method. Doesn't work on
+    "true" iterators'''
+    # After thinking about it for a second I realized this is REALLY easy,
+    # still worth having an iterating slice though.
+    return (data[n] for n in xrange(*args, **kwargs))
+    
 def get_first(data):
      '''returns the first element wihtout upsetting an iterator.
      Handles non-iterators by just returning them.
@@ -543,57 +551,75 @@ def get_first(data):
 ''' These functions are all fast list lookups not supported by any module in
 python. They use iterators and compressors to do things as fast as possible in
 native python'''
-def is_all_type(data_list, dtype, start = 0, stop = None):
-    data_list = itools.islice(data_list, start, stop)
+def is_all_type(data_list, dtype, start = 0, stop = None, step = 1):
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         next((n for n in data_list if type(n) != dtype))
         return False
     except StopIteration:
         return True
 
-def special_figt(data_list, value, start = 0, stop = None):
-    index = first_index_gt(data_list, value, start, stop)
+def special_figt(data_list, value, start = 0, stop = None, step = 1):
+    index = first_index_gt(data_list, value, start, stop, step)
     if data_list[index + 1] > value:
         return index + start
     else:
         return None
 
-def first_index_gt(data_list, value, start = 0, stop = None):
+def first_index_gt(data_list, value, start = 0, stop = None, step = 1):
     '''return the first index greater than value from a given list like object'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] > value)
         return index + start
     except StopIteration: return None
 
-def first_index_gtet(data_list, value, start = 0, stop = None):
+def first_index_gtet(data_list, value, start = 0, stop = None, step = 1):
     '''return the first index greater than value from a given list like object'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] >= value)
         return index + start
     except StopIteration: return None
 
-def first_index_lt(data_list, value, start = 0, stop = None):
+def first_index_lt(data_list, value, start = 0, stop = None, step = 1):
     '''return the first index less than value from a given list like object'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] < value)
         return index + start
     except StopIteration: return None
 
-def first_index_ne(data_list, value, start = 0, stop = None):
+def first_index_ne(data_list, value, start = 0, stop = None, step = 1):
     '''returns first index not equal to the value from list'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if data[1] != value)
         return index + start
     except StopIteration: return None
 
-def first_index_et(data_list, value, start = 0, stop = None):
+def first_index_et(data_list, value, start = 0, stop = None, step = 1):
     '''same as data_list.index(value), except with exception handling (returns
     -1). Also finds 'nan' values '''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         if type(value) == float and math.isnan(value):
             floats = set(float,)
@@ -608,21 +634,49 @@ def first_index_et(data_list, value, start = 0, stop = None):
             enumerate(data_list) if data[1] == value) + start
     except (ValueError, StopIteration): return None
 
-def first_index_in(data_list, in_set, start = 0, stop = None):
+def first_index_in(data_list, in_set, start = 0, stop = None, step = 1):
     '''finds the first index that is in a given set of any iterator'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if 
             data[1] in in_set)
         return index + start
     except StopIteration: return None
 
-def first_index_nin(data_list, notin_set, start = 0, stop = None):
+def first_index_nin(data_list, notin_set, start = 0, stop = None, step = 1):
     '''finds the first index that is not in a given set of any iterator'''
-    data_list = itools.islice(data_list, start, stop)
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
     try:
         index = next(data[0] for data in enumerate(data_list) if 
             data[1] not in notin_set)
+        return index + start
+    except StopIteration: return None
+
+def first_index_is(data_list, identity, start = 0, stop = None, step = 1):
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
+    try:
+        index = next(data[0] for data in enumerate(data_list) if 
+            data[1] is identity)
+        return index + start
+    except StopIteration: return None
+
+def first_index_nis(data_list, identity, start = 0, stop = None, step = 1):
+    if step == None or step > 0:
+        data_list = itools.islice(data_list, start, stop, step)
+    else:
+        data_list = bslice(data_list, start, stop, step)
+    try:
+        index = next(data[0] for data in enumerate(data_list) if 
+            data[1] is not identity)
         return index + start
     except StopIteration: return None
 
