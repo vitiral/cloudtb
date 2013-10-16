@@ -4,10 +4,17 @@ from PyQt4 import QtCore, QtGui
 import sys
 import icons_rc
 
+from cloudtb import dbe
+
 class Node(object):
-    def __init__(self, name, parent=None):
+    '''I think some of these might be required definitions by PyQt. I'm not
+    sure how else it would work!
+    
+    '''
+    def __init__(self, name, parent=None, attrib_dict = None):
         
         self._name = name
+        self._attrib = attrib_dict
         self._children = []
         self._parent = parent
         
@@ -34,12 +41,10 @@ class Node(object):
         
         if position < 0 or position > len(self._children):
             return False
-        
         child = self._children.pop(position)
         child._parent = None
 
         return True
-
 
     def name(self):
         return self._name
@@ -84,35 +89,10 @@ class Node(object):
 
 
 
-class TransformNode(Node):
-    
-    def __init__(self, name, parent=None):
-        super(TransformNode, self).__init__(name, parent)
-        
-    def typeInfo(self):
-        return "TRANSFORM"
-
-class CameraNode(Node):
-    
-    def __init__(self, name, parent=None):
-        super(CameraNode, self).__init__(name, parent)
-        
-    def typeInfo(self):
-        return "CAMERA"
-
-class LightNode(Node):
-    
-    def __init__(self, name, parent=None):
-        super(LightNode, self).__init__(name, parent)
-        
-    def typeInfo(self):
-        return "LIGHT"
-    
-class SceneGraphModel(QtCore.QAbstractItemModel):
-    
+class TableViewModel(QtCore.QAbstractItemModel):
     """INPUTS: Node, QObject"""
     def __init__(self, root, parent=None):
-        super(SceneGraphModel, self).__init__(parent)
+        super(TableViewModel, self).__init__(parent)
         self._rootNode = root
 
     """INPUTS: QModelIndex"""
@@ -133,7 +113,10 @@ class SceneGraphModel(QtCore.QAbstractItemModel):
     """INPUTS: QModelIndex, int"""
     """OUTPUT: QVariant, strings are cast to QString which is a QVariant"""
     def data(self, index, role):
-        
+        '''index is an object that contains a pointer to the item inside
+        internPointer().  Note that this was set during the insertRows 
+        method call, so you don't need to track them!
+        '''
         if not index.isValid():
             return None
         
@@ -141,7 +124,6 @@ class SceneGraphModel(QtCore.QAbstractItemModel):
         node = index.internalPointer()
 
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
-            pdb.set_trace()
             if index.column() == 0:
                 return node.name()
             
@@ -221,15 +203,13 @@ class SceneGraphModel(QtCore.QAbstractItemModel):
     
     """INPUTS: int, int, QModelIndex"""
     def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
-        
         parentNode = self.getNode(parent)
         
-        self.beginInsertRows(parent, position, position + rows - 1)
+        self.beginInsertRows(parent, position, position + len(rows) - 1)
         
-        for row in range(rows):
-            
-            childCount = parentNode.childCount()
-            childNode = Node("untitled" + str(childCount))
+        for row in rows:
+#            childCount = parentNode.childCount()
+            childNode = row
             success = parentNode.insertChild(position, childNode)
         
         self.endInsertRows()
@@ -265,38 +245,71 @@ class SceneGraphModel(QtCore.QAbstractItemModel):
         
         return success
 
-
-    
-    
-    
+def get_file_folder_node(fdata, parent):
+    '''return the node structure of the data.
+    [[(dir_name, path), 
+      [dir_name, path), 
+        [(file, path), 
+        (file, path)]]
+      ]
+    ]    
+    '''
+    name, path = fdata[0]
+    attrib_dict = {'path', path}
+    if len(fdata) == 1:
+        fileobj = Node(name, attrib_dict=attrib_dict, parent = parent)
+        return fileobj
+    folderobj = Node(name, attrib_dict=attrib_dict, parent = parent)
+    for fobj in fdata[1]:
+        get_file_folder_node(fobj, parent = folderobj)
+    return folderobj
     
 if __name__ == '__main__':
+    from pprint import pprint
     
     app = QtGui.QApplication(sys.argv)
     app.setStyle("plastique")
     
-    rootNode   = Node("Hips")
-    childNode0 = TransformNode("RightPirateLeg",        rootNode)
-    childNode1 = Node("RightPirateLeg_END",             childNode0)
-    childNode2 = CameraNode("LeftFemur",                rootNode)
-    childNode3 = Node("LeftTibia",                      childNode2)
-    childNode4 = Node("LeftFoot",                       childNode3)
-    childNode5 = LightNode("LeftFoot_END",              childNode4)
+    rootNode   = Node("Rootdir")
+    dir1 = Node("Dir1", rootNode)
+    file1 = Node("file1", dir1)
+    file2 = Node("file2", dir1)
+    dir1_1 = Node("dir1_1", dir1)
+    file1_1 = Node('file1_1', dir1_1)
+    
+#    childNode0 = TransformNode("RightPirateLeg",        rootNode)
+#    childNode1 = Node("RightPirateLeg_END",             childNode0)
+#    childNode2 = CameraNode("LeftFemur",                rootNode)
+#    childNode3 = Node("LeftTibia",                      childNode2)
+#    childNode4 = Node("LeftFoot",                       childNode3)
+#    childNode5 = LightNode("LeftFoot_END",              childNode4)
 
     print rootNode
     
-    model = SceneGraphModel(rootNode)
+    model = TableViewModel(rootNode)
     
     treeView = QtGui.QTreeView()
     treeView.show()
     
     treeView.setModel(model)
     
+    file1 = [('file1', 'pfile1')]
+    file2 = [('file2', 'pfile2')]
+    file3 = [('file3', 'pfile3')]
+    file4 = [('file4', 'pfile4')]    
+    folder1 = [('folder1', 'pfolder1'), (file1, file2)]
+    folder2 = [('folder2', 'pfolder2'), (file3,)]
     
-    rightPirateLeg = model.index(0, 0, QtCore.QModelIndex())
+    basefolder = [('base', 'pbase'), (folder1, folder2, file4)]
     
-    
-    model.insertRows(1, 5, rightPirateLeg)
-    model.insertLights(1, 5 , rightPirateLeg)
+    pdb.set_trace()
+    rows = get_file_folder_node(basefolder, None)
+    pprint(rows)
+    model.insertRows(1, [rows], QtCore.QModelIndex())
+#    rightPirateLeg = model.index(0, 0, QtCore.QModelIndex())
+#    
+#    
+#    model.insertRows(1, 5, rightPirateLeg)
+#    model.insertLights(1, 5 , rightPirateLeg)
 
     sys.exit(app.exec_())

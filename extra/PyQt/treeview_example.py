@@ -13,7 +13,6 @@ class Node(object):
         if parent is not None:
             parent.addChild(self)
 
-
     def typeInfo(self):
         return "NODE"
 
@@ -38,7 +37,6 @@ class Node(object):
         child._parent = None
 
         return True
-
 
     def name(self):
         return self._name
