@@ -72,15 +72,15 @@ class Node(object):
         tabLevel += 1
         
         for i in range(tabLevel):
-            output += "\t"
+            output += "  "
         
-        output += "|------" + self._name + "\n"
+        output += "|-" + self._name + "\n"
         
         for child in self._children:
             output += child.log(tabLevel)
         
         tabLevel -= 1
-        output += "\n"
+#        output += "\n"
         
         return output
 
@@ -243,6 +243,9 @@ class TableViewModel(QtCore.QAbstractItemModel):
 # TODO: doesn't work. Not sure how to get icons
 ICON_FOLDER = QtGui.QIcon.fromTheme('folder')
 
+def _node_compare(a, b):
+    return b.isdir - a.isdir
+    
 def get_file_folder_node(fdata, parent):
     '''return the node structure of the data.
     [[(dir_name, path), 
@@ -262,18 +265,21 @@ def get_file_folder_node(fdata, parent):
         if len(fobj) == 1:
             fileobj = Node(name, parent = parent, icon = None)
             fileobj.full_path = path
+            fileobj.isdir = False
             nodes.append(fileobj)
             continue
         folderobj = Node(name, parent = parent, icon = ICON_FOLDER,
                          )
         folderobj.full_path = path
+        folderobj.isdir = True
         
         get_file_folder_node(fobj[1], parent = folderobj)
         nodes.append(folderobj)
+    nodes.sort(cmp = _node_compare)
     return nodes
 import itertools
 
-def _get_filelist_node(iter_file_list, dir_path = ''):
+def _get_filelist_nodes(iter_file_list, dir_path = ''):
     '''Takes a sorted file list iterator and returns the files in a 
     format that can be converted'''
     files = []
@@ -289,17 +295,16 @@ def _get_filelist_node(iter_file_list, dir_path = ''):
             break
         
         if os.path.isdir(fpath):
-            iter_file_list, new_files = _get_filelist_node(iter_file_list,
+            iter_file_list, new_files = _get_filelist_nodes(iter_file_list,
                     dir_path = fpath)
             files.append((fpath, new_files))
         else:
             files.append((fpath,))
     return iter_file_list, files
 
-def get_filelist_node(file_list, parent = None):
+def get_filelist_nodes(file_list, parent = None):
     file_list = sorted(file_list)
-    file_tuples = _get_filelist_node(iter(file_list))[1]
-    print len(file_tuples[0])
+    file_tuples = _get_filelist_nodes(iter(file_list))[1]
     return get_file_folder_node(file_tuples, parent)
 
 def dev_show_file_list(file_objects):
@@ -321,41 +326,23 @@ def dev_show_file_list(file_objects):
 if __name__ == '__main__':
     from pprint import pprint
 
-    app = QtGui.QApplication(sys.argv)
-    
-    model = TableViewModel(rootNode)
-    
-    treeView = QtGui.QTreeView()
-    treeView.show()
+    files = '''/home/user/Projects/Learning/LearningQt/LearningQt.pro.user
+/home/user/Projects/Learning/LearningQt/LearningQt.pro
+/home/user/Projects/Learning/LearningQt/qmlapplicationviewer/qmlapplicationviewer.h
+/home/user/Projects/Learning/LearningQt/qmlapplicationviewer/qmlapplicationviewer.cpp
+/home/user/Projects/Learning/LearningQt/qmlapplicationviewer/qmlapplicationviewer.pri
+/home/user/Projects/Learning/LearningQt/qmlapplicationviewer
+/home/user/Projects/Learning/LearningQt/LearningQt64.png
+/home/user/Projects/Learning/LearningQt/LearningQt_harmattan.desktop
+/home/user/Projects/Learning/LearningQt/LearningQt.svg
+/home/user/Projects/Learning/LearningQt/main.cpp
+/home/user/Projects/Learning/LearningQt/LearningQt.desktop
+/home/user/Projects/Learning/LearningQt/qml/LearningQt/main.qml
+/home/user/Projects/Learning/LearningQt/qml/LearningQt
+/home/user/Projects/Learning/LearningQt/qml
+/home/user/Projects/Learning/LearningQt/LearningQt80.png'''    
+    nodes = get_filelist_nodes(files.split('\n'))
+    for n in nodes:
+        print n
+    dev_show_file_list(nodes)
 
-
-    app.setStyle("plastique")
-    
-    
-    
-    dir1 = Node("Dir1", rootNode)
-    file1 = Node("file1", dir1)
-    file2 = Node("file2", dir1)
-    dir1_1 = Node("dir1_1", dir1)
-    file1_1 = Node('file1_1', dir1_1)
-    
-    print rootNode
-    
-    file1 = ['f1/pfile1']
-    file2 = ['f1/file2']
-    file3 = ['f1/file3']
-    file4 = ['f1/file4']    
-    folder1 = ['base/folder1', (file1, file2)]
-    folder2 = ['base/folder2', (file3,)]
-    
-    basefolder = ['base/pbase', (folder1, folder2, file4)]
-    
-    rows = get_file_folder_node(basefolder, None)
-    pprint(rows)
-#    rightPirateLeg = model.index(0, 0, QtCore.QModelIndex())
-#    
-#    
-#    model.insertRows(1, 5, rightPirateLeg)
-#    model.insertLights(1, 5 , rightPirateLeg)
-
-    sys.exit(app.exec_())

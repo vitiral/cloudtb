@@ -255,6 +255,7 @@ if __name__ == '__main__':
     
     out = get_match_paths('/home/user/Projects/Learning/LearningQt', '.*')
     print '\n\n\nOUTPUT'
-    fnodes = treeview.get_filelist_node(out)
-    pdb.set_trace()
+    for n in out:
+        print n
+    fnodes = treeview.get_filelist_nodes(out)
     treeview.dev_show_file_list(fnodes)
