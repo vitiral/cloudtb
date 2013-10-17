@@ -251,7 +251,10 @@ class RegExpBuilder(object):
 if __name__ == '__main__':
     import dbe
     from pprint import pprint
-    from pyqt import treeview
-    out = get_match_paths('/home/user/Projects/Learning', '.*')
+    from PyQt import treeview
+    
+    out = get_match_paths('/home/user/Projects/Learning/LearningQt', '.*')
     print '\n\n\nOUTPUT'
-    pprint(sorted(out))
+    fnodes = treeview.get_filelist_node(out)
+    pdb.set_trace()
+    treeview.dev_show_file_list(fnodes)

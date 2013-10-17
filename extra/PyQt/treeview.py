@@ -202,10 +202,10 @@ class TableViewModel(QtCore.QAbstractItemModel):
         
         self.beginInsertRows(parent, position, position + len(rows) - 1)
         
-        for row in rows:
+        for i, row in enumerate(rows):
 #            childCount = parentNode.childCount()
             childNode = row
-            success = parentNode.insertChild(position, childNode)
+            success = parentNode.insertChild(position + i, childNode)
         
         self.endInsertRows()
 
@@ -253,36 +253,53 @@ def get_file_folder_node(fdata, parent):
     ]    
     '''
     # TODO: set icons correctly
-    path = fdata[0]
-    name = os.path.split(path)[1]
     
-    if len(fdata) == 1:
-        fileobj = Node(name, parent = parent, icon = None)
-        fileobj.full_path = path
-        return fileobj
-    folderobj = Node(name, parent = parent, icon = ICON_FOLDER,
-                     )
-    fileobj.full_path = path
-    for fobj in fdata[1]:
-        get_file_folder_node(fobj, parent = folderobj)
-    return folderobj
-
+    nodes = []
+    for fobj in fdata:
+        path = fobj[0]
+        name = os.path.split(path)[1]
+        
+        if len(fobj) == 1:
+            fileobj = Node(name, parent = parent, icon = None)
+            fileobj.full_path = path
+            nodes.append(fileobj)
+            continue
+        folderobj = Node(name, parent = parent, icon = ICON_FOLDER,
+                         )
+        folderobj.full_path = path
+        
+        get_file_folder_node(fobj[1], parent = folderobj)
+        nodes.append(folderobj)
+    return nodes
 import itertools
 
-def _get_filelist_node(iter_file_list):
+def _get_filelist_node(iter_file_list, dir_path = ''):
     '''Takes a sorted file list iterator and returns the files in a 
     format that can be converted'''
     files = []
-    for fpath in iter_file_list:
+    dir_path = os.path.join(dir_path, '')   # Put into directory syntax
+    len_dp = len(dir_path)
+    while True:
+        try:
+            fpath = next(iter_file_list)
+        except StopIteration:
+            break
+        if dir_path != fpath[:len_dp]:
+            iter_file_list = itertools.chain((fpath,), iter_file_list)
+            break
+        
         if os.path.isdir(fpath):
-            return (fpath, _get_filelist_node(iter_file_list))
+            iter_file_list, new_files = _get_filelist_node(iter_file_list,
+                    dir_path = fpath)
+            files.append((fpath, new_files))
         else:
             files.append((fpath,))
-    return files
+    return iter_file_list, files
 
 def get_filelist_node(file_list, parent = None):
     file_list = sorted(file_list)
-    file_tuples = _get_filelist_node(iter(file_list))
+    file_tuples = _get_filelist_node(iter(file_list))[1]
+    print len(file_tuples[0])
     return get_file_folder_node(file_tuples, parent)
 
 def dev_show_file_list(file_objects):
@@ -290,13 +307,14 @@ def dev_show_file_list(file_objects):
     
     app = QtGui.QApplication(sys.argv)
     
+    rootNode   = Node("Rootdir")
     model = TableViewModel(rootNode)
     
     treeView = QtGui.QTreeView()
     treeView.show()
     
     treeView.setModel(model)
-    model.insertRows(1, [file_objects], QtCore.QModelIndex())
+    model.insertRows(0, file_objects, QtCore.QModelIndex())
     sys.exit(app.exec_())
 
     
@@ -313,7 +331,8 @@ if __name__ == '__main__':
 
     app.setStyle("plastique")
     
-    rootNode   = Node("Rootdir")
+    
+    
     dir1 = Node("Dir1", rootNode)
     file1 = Node("file1", dir1)
     file2 = Node("file2", dir1)
