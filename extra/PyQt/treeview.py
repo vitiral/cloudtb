@@ -1,29 +1,29 @@
 import pdb
+import os
 
 from PyQt4 import QtCore, QtGui
 import sys
 import icons_rc
 
+
 from cloudtb import dbe
 
 class Node(object):
-    '''I think some of these might be required definitions by PyQt. I'm not
-    sure how else it would work!
+    '''A general node stucture to be used in treeview
+    the attrib_dict can store any information your overall treeview 
+    needs it to store.
     
     '''
-    def __init__(self, name, parent=None, attrib_dict = None):
+    def __init__(self, name, parent=None, icon = None, attrib_dict = None):
         
         self._name = name
         self._attrib = attrib_dict
         self._children = []
         self._parent = parent
+        self.icon = icon
         
         if parent is not None:
             parent.addChild(self)
-
-
-    def typeInfo(self):
-        return "NODE"
 
     def addChild(self, child):
         self._children.append(child)
@@ -129,16 +129,11 @@ class TableViewModel(QtCore.QAbstractItemModel):
             
         if role == QtCore.Qt.DecorationRole:
             if index.column() == 0:
-                typeInfo = node.typeInfo()
-                
-                if typeInfo == "LIGHT":
-                    return QtGui.QIcon(QtGui.QPixmap(":/Light.png"))
-                
-                if typeInfo == "TRANSFORM":
-                    return QtGui.QIcon(QtGui.QPixmap(":/Transform.png"))
-                
-                if typeInfo == "CAMERA":
-                    return QtGui.QIcon(QtGui.QPixmap(":/Camera.png"))
+                icon = node.icon
+                if icon == None:
+                    return False
+                else:
+                    return icon
 
     """INPUTS: QModelIndex, QVariant, int (flag)"""
     def setData(self, index, value, role=QtCore.Qt.EditRole):
@@ -201,7 +196,7 @@ class TableViewModel(QtCore.QAbstractItemModel):
         return self._rootNode
 
     
-    """INPUTS: int, int, QModelIndex"""
+    """INPUTS: int, List of Nodes, QModelIndex"""
     def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
         parentNode = self.getNode(parent)
         
@@ -245,6 +240,9 @@ class TableViewModel(QtCore.QAbstractItemModel):
         
         return success
 
+# TODO: doesn't work. Not sure how to get icons
+ICON_FOLDER = QtGui.QIcon.fromTheme('folder')
+
 def get_file_folder_node(fdata, parent):
     '''return the node structure of the data.
     [[(dir_name, path), 
@@ -254,20 +252,65 @@ def get_file_folder_node(fdata, parent):
       ]
     ]    
     '''
-    name, path = fdata[0]
-    attrib_dict = {'path', path}
+    # TODO: set icons correctly
+    path = fdata[0]
+    name = os.path.split(path)[1]
+    
     if len(fdata) == 1:
-        fileobj = Node(name, attrib_dict=attrib_dict, parent = parent)
+        fileobj = Node(name, parent = parent, icon = None)
+        fileobj.full_path = path
         return fileobj
-    folderobj = Node(name, attrib_dict=attrib_dict, parent = parent)
+    folderobj = Node(name, parent = parent, icon = ICON_FOLDER,
+                     )
+    fileobj.full_path = path
     for fobj in fdata[1]:
         get_file_folder_node(fobj, parent = folderobj)
     return folderobj
+
+import itertools
+
+def _get_filelist_node(iter_file_list):
+    '''Takes a sorted file list iterator and returns the files in a 
+    format that can be converted'''
+    files = []
+    for fpath in iter_file_list:
+        if os.path.isdir(fpath):
+            return (fpath, _get_filelist_node(iter_file_list))
+        else:
+            files.append((fpath,))
+    return files
+
+def get_filelist_node(file_list, parent = None):
+    file_list = sorted(file_list)
+    file_tuples = _get_filelist_node(iter(file_list))
+    return get_file_folder_node(file_tuples, parent)
+
+def dev_show_file_list(file_objects):
+    '''For developemnet'''
+    
+    app = QtGui.QApplication(sys.argv)
+    
+    model = TableViewModel(rootNode)
+    
+    treeView = QtGui.QTreeView()
+    treeView.show()
+    
+    treeView.setModel(model)
+    model.insertRows(1, [file_objects], QtCore.QModelIndex())
+    sys.exit(app.exec_())
+
     
 if __name__ == '__main__':
     from pprint import pprint
-    
+
     app = QtGui.QApplication(sys.argv)
+    
+    model = TableViewModel(rootNode)
+    
+    treeView = QtGui.QTreeView()
+    treeView.show()
+
+
     app.setStyle("plastique")
     
     rootNode   = Node("Rootdir")
@@ -277,35 +320,19 @@ if __name__ == '__main__':
     dir1_1 = Node("dir1_1", dir1)
     file1_1 = Node('file1_1', dir1_1)
     
-#    childNode0 = TransformNode("RightPirateLeg",        rootNode)
-#    childNode1 = Node("RightPirateLeg_END",             childNode0)
-#    childNode2 = CameraNode("LeftFemur",                rootNode)
-#    childNode3 = Node("LeftTibia",                      childNode2)
-#    childNode4 = Node("LeftFoot",                       childNode3)
-#    childNode5 = LightNode("LeftFoot_END",              childNode4)
-
     print rootNode
     
-    model = TableViewModel(rootNode)
+    file1 = ['f1/pfile1']
+    file2 = ['f1/file2']
+    file3 = ['f1/file3']
+    file4 = ['f1/file4']    
+    folder1 = ['base/folder1', (file1, file2)]
+    folder2 = ['base/folder2', (file3,)]
     
-    treeView = QtGui.QTreeView()
-    treeView.show()
+    basefolder = ['base/pbase', (folder1, folder2, file4)]
     
-    treeView.setModel(model)
-    
-    file1 = [('file1', 'pfile1')]
-    file2 = [('file2', 'pfile2')]
-    file3 = [('file3', 'pfile3')]
-    file4 = [('file4', 'pfile4')]    
-    folder1 = [('folder1', 'pfolder1'), (file1, file2)]
-    folder2 = [('folder2', 'pfolder2'), (file3,)]
-    
-    basefolder = [('base', 'pbase'), (folder1, folder2, file4)]
-    
-    pdb.set_trace()
     rows = get_file_folder_node(basefolder, None)
     pprint(rows)
-    model.insertRows(1, [rows], QtCore.QModelIndex())
 #    rightPirateLeg = model.index(0, 0, QtCore.QModelIndex())
 #    
 #    

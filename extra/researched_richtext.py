@@ -38,7 +38,15 @@ from guitools import get_color_from_index, get_color_str
 from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags, 
                       text_format_html, HtmlPart)
 
-import iterators, textools
+try:
+    from .. import iteration, textools
+except ValueError:
+    try:
+        import iteration, textools
+    except ImportError:
+        import sys
+        sys.path.insert(1, '..')
+        import iteration, textools
 
 def re_search_format_html(data_list, show_tags_on_replace = False):
     html_list = [HtmlPart(HEADER, '', '')]
@@ -65,11 +73,14 @@ def _reduce_match_paths(folder_path,
     we need to search as much as possible'''
     # first we are going to break the file_regexp up into text parts 
     
+
+IGNORE = '.git, '
 def get_match_paths(folder_path, 
                     file_regexp = None, text_regexp = None, 
                     recurse = True, 
                     max_len_searched = None,
-                    watchers = None):
+                    watchers = None,
+                    ignore = None):
     '''
     get the file paths in a folder that have text which matches
     the regular expression. Returns [(full_file_path, iter(re_searched_data), 
@@ -78,34 +89,36 @@ def get_match_paths(folder_path,
     
     Watchers should be a list of watchers to be called on each new file name
     '''
+    if ignore == None: ignore = IGNORE
     if (file_regexp, text_regexp) == (None, None):
         raise ValueError('Must specify at least one regex!')
     if file_regexp != None:
         if type(file_regexp) in (str, unicode):
-            file_regexp_cmp = re.compile(file_regexp)
+            file_regexp = re.compile(file_regexp)
         file_fnd = file_regexp.finditer
     if text_regexp != None:
         if type(text_regexp) in (str, unicode):
-            text_regexp_cmp = re.compile(text_regexp)
+            text_regexp = re.compile(text_regexp)
         text_fnd = text_regexp.finditer
     
-    
     folder_path = os.path.abspath(folder_path)
-    
     fpaths = []
     for fname in os.listdir(folder_path):
+        if fname in ignore: continue
         path = os.path.join(folder_path, fname)
+        del fname
         if watchers:
             [w(path) for w in watchers]
 
         if os.path.isdir(path):
-            fpaths.extend(get_match_paths(folder_path,
+            fpaths.extend(get_match_paths(path,
                 file_regexp, text_regexp, recurse, 
                 max_len_searched))
 
         if file_regexp:
             try:
-                next(file_fnd(fname))
+                # find any match to file name
+                next(file_fnd(path))
             except StopIteration:
                 continue
         
@@ -116,6 +129,7 @@ def get_match_paths(folder_path,
                 #TODO: check if file is a text file
                 text = f.read()
                 try:
+                    # find any match to text name
                     next(text_fnd(text, 0, max_len_searched))
                 except StopIteration:
                     continue
@@ -136,10 +150,10 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
     assert(regpart != None)
     hiter = (n.regpart for n in html_list)
     
-    index_start = iterators.first_index_is(hiter, regpart)
+    index_start = iteration.first_index_is(hiter, regpart)
     if index_start == None:
         raise ValueError("regpart not found")
-    index_end = iterators.first_index_isn(hiter, regpart)
+    index_end = iteration.first_index_isn(hiter, regpart)
     if index_end == None:
         index_end = index_start
     else:
@@ -231,5 +245,13 @@ class RegExpBuilder(object):
         s.start = None
         s.end = None
         s.middle = None
-    
-            
+
+
+
+if __name__ == '__main__':
+    import dbe
+    from pprint import pprint
+    from pyqt import treeview
+    out = get_match_paths('/home/user/Projects/Learning', '.*')
+    print '\n\n\nOUTPUT'
+    pprint(sorted(out))

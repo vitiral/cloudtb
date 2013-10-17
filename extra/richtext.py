@@ -44,7 +44,13 @@ from guitools import get_color_from_index, get_color_str
 try:
     from .. import iteration, textools
 except ValueError:
-    import iteration, textools
+    try:
+        import iteration, textools
+    except ImportError:
+        import sys
+        sys.path.insert(1, '..')
+        import iteration, textools
+
 
 # replace list going from regular text to html
 
