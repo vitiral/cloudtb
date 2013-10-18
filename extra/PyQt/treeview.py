@@ -87,14 +87,65 @@ class Node(object):
     def __repr__(self):
         return self.log()
 
-
-
 class TableViewModel(QtCore.QAbstractItemModel):
     """INPUTS: Node, QObject"""
-    def __init__(self, root, parent=None):
+    def __init__(self, root, parent=None, header_title = None):
         super(TableViewModel, self).__init__(parent)
+        self.is_editable = False
+        self.is_selectable = True
+        self.is_enabled = True
+        self.set_flags()
         self._rootNode = root
+        self.header_title = header_title
 
+    # The following are created functions called in "data" -- which is a 
+    # Qt defined funciton. This way of doing things is FAR more pythonic
+    # and allows classes to inherit this one and not have to rewrite the
+    # entire data method
+    # all of them recieve an index and a node
+    
+    def role_display(self, index, node):
+        if index.column() == 0:
+                return node.name()
+    
+    def role_edit(self, index, node):
+        return self.role_display(index, node)
+    
+    def role_tool_tip(self, index, node):
+        return
+        
+    def role_check_state(self, index, node):
+        return
+    
+    def role_decoration(self, index, node):            
+        if index.column() == 0:
+            icon = node.icon
+            if icon == None:
+                return False
+            else:
+                return icon
+    
+    def role_flags(self, index, node):
+        '''While not technically a "role" it behaves in much the same way.
+        This method is called by the "flags" method for all indexes with
+        a node'''
+        return self.BASE_FLAGS
+    
+    def set_flags(self, is_editable = None, is_selectable = None,
+                  is_enabled = None):
+        ''' Sets new flags to the BASE_FLAGS variable'''
+        if is_editable != None:
+            self.is_editable = is_editable
+        if is_selectable != None:
+            self.is_selectable = is_selectable
+        if is_enabled != None:
+            self.is_enabled = is_enabled
+        
+        self.BASE_FLAGS = (QtCore.Qt.ItemIsEnabled * bool(self.is_enabled)
+            | QtCore.Qt.ItemIsSelectable * bool(self.is_selectable)
+            | QtCore.Qt.ItemIsEditable * bool(self.is_editable)
+            )
+    
     """INPUTS: QModelIndex"""
     """OUTPUT: int"""
     def rowCount(self, parent):
@@ -120,20 +171,22 @@ class TableViewModel(QtCore.QAbstractItemModel):
         if not index.isValid():
             return None
         
-        
         node = index.internalPointer()
-
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
-            if index.column() == 0:
-                return node.name()
+        
+        if role == QtCore.Qt.EditRole:
+            return self.role_edit(index, node)
+        
+        if role == QtCore.Qt.ToolTipRole:
+            return self.role_tool_tip(index, node)
+        
+        if role == QtCore.Qt.CheckStateRole:
+            return self.role_check_state(index, node)
+        
+        if role == QtCore.Qt.DisplayRole:
+            return self.role_display(index, node)
             
         if role == QtCore.Qt.DecorationRole:
-            if index.column() == 0:
-                icon = node.icon
-                if icon == None:
-                    return False
-                else:
-                    return icon
+            return self.role_decoration(index, node)
 
     """INPUTS: QModelIndex, QVariant, int (flag)"""
     def setData(self, index, value, role=QtCore.Qt.EditRole):
@@ -148,6 +201,8 @@ class TableViewModel(QtCore.QAbstractItemModel):
     """OUTPUT: QVariant, strings are cast to QString which is a QVariant"""
     def headerData(self, section, orientation, role):
         if role == QtCore.Qt.DisplayRole:
+            if self.header_title != None:
+                return self.header_title
             if section == 0:
                 return "Scenegraph"
             else:
@@ -156,10 +211,11 @@ class TableViewModel(QtCore.QAbstractItemModel):
     """INPUTS: QModelIndex"""
     """OUTPUT: int (flag)"""
     def flags(self, index):
-        return (QtCore.Qt.ItemIsEnabled | 
-            QtCore.Qt.ItemIsSelectable #| 
-#            QtCore.Qt.ItemIsEditable
-            )
+        if not index.isValid():
+            return self.BASE_FLAGS
+        
+        node = index.internalPointer()
+        return self.role_flags(index, node)
 
     """INPUTS: QModelIndex"""
     """OUTPUT: QModelIndex"""
@@ -170,7 +226,6 @@ class TableViewModel(QtCore.QAbstractItemModel):
         
         if parentNode == self._rootNode:
             return QtCore.QModelIndex()
-        
         return self.createIndex(parentNode.row(), 0, parentNode)
         
     """INPUTS: int, int, QModelIndex"""
@@ -178,6 +233,10 @@ class TableViewModel(QtCore.QAbstractItemModel):
     """Should return a QModelIndex that corresponds to the given row, 
         column and parent node"""
     def index(self, row, column, parent):
+        # This is how Qt creates the nested (tree) list. It knows how many
+        # rows it has because of insertRows, and it uses index and
+        # createIndex to build the tree.
+#        print 'Index called', row, column
         parentNode = self.getNode(parent)
         childItem = parentNode.child(row)
         if childItem:
@@ -211,22 +270,6 @@ class TableViewModel(QtCore.QAbstractItemModel):
 
         return success
     
-    def insertLights(self, position, rows, parent=QtCore.QModelIndex()):
-        
-        parentNode = self.getNode(parent)
-        
-        self.beginInsertRows(parent, position, position + rows - 1)
-        
-        for row in range(rows):
-            
-            childCount = parentNode.childCount()
-            childNode = LightNode("light" + str(childCount))
-            success = parentNode.insertChild(position, childNode)
-        
-        self.endInsertRows()
-
-        return success
-
     """INPUTS: int, int, QModelIndex"""
     def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
         
@@ -235,10 +278,14 @@ class TableViewModel(QtCore.QAbstractItemModel):
         
         for row in range(rows):
             success = parentNode.removeChild(position)
+            # TODO: break if not success?
             
         self.endRemoveRows()
         
         return success
+    
+    def clear_rows(self):
+        return self.removeRows(0, len(self._rootNode), self._rootNode)
 
 # TODO: doesn't work. Not sure how to get icons
 ICON_FOLDER = QtGui.QIcon.fromTheme('folder')

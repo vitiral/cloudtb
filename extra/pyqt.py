@@ -29,7 +29,6 @@ class StdWidget(QtGui.QWidget):
         '''
         assert(self._NAME_ not in application_settings)
         settings = {}
-        application_settings[self._NAME_] = settings
 
         need_settings = {}
         # save settings that can be proccessed.
@@ -37,9 +36,16 @@ class StdWidget(QtGui.QWidget):
             getexec, setexec = key
             getval, setval = value
             if getval == None:
-                need_settings[key] = getval
+                need_settings[key] = getval, setval
             else:
-                settings[key] = eval(getexec.format('self'))
+                try:
+                    settings[key] = getval, eval(getexec.format(getval))
+                except Exception as E:
+                    print "ERROR: Failure to save settings!"
+                    print 'Error:', E                    
+                    print "SYNTAX:", getexec, getval
+                    
+        application_settings[self._NAME_] = settings
         return need_settings
         
     def load_settings(self, application_settings):
@@ -50,11 +56,11 @@ class StdWidget(QtGui.QWidget):
         implementations of this function should do the same (for error
             checking at top level)
         '''
+        std_settings = self.std_settings        
         try:
             settings = application_settings[self._NAME_]
         except KeyError:
-            settings = self.std_settings
-        std_settings = self.std_settings
+            settings = std_settings
         # remove unrecognized settings
         for key in tuple(settings.keys()):
             if key not in std_settings:
@@ -72,10 +78,16 @@ class StdWidget(QtGui.QWidget):
             getval, setval = item
 
             if setval == None:
-                need_settings[key] = setval
+                need_settings[key] = getval, setval
             else:
-                exec(setexec.format(n=setval))
-            
+                try:
+                    exec(setexec.format(n=setval))
+                except Exception as E:
+                    print "ERROR: Failure to save settings!"
+                    print 'Error:', E                    
+                    print "SYNTAX:", getexec, getval
+                    print '\n', 'Loading default setting'
+                    exec(key[1].format(n=std_settings[key][1]))
         # return settings that still need to be loaded in -- 
         #  to be used in parent
         return need_settings

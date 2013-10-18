@@ -40,7 +40,8 @@ Some on useful modules not included:
 '''
 
 def guess_is_acii_text(path, ext):
-    
+    pass
+
     
 def is_file_ext(path, ext):
     n, fext = os.path.splitext(path)

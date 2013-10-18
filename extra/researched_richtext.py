@@ -75,6 +75,7 @@ def _reduce_match_paths(folder_path,
     
 
 IGNORE = '.git, '
+# DEV
 def get_match_paths(folder_path, 
                     file_regexp = None, text_regexp = None, 
                     recurse = True, 
@@ -83,10 +84,8 @@ def get_match_paths(folder_path,
                     ignore = None):
     '''
     get the file paths in a folder that have text which matches
-    the regular expression. Returns [(full_file_path, iter(re_searched_data), 
-        incomplete_matches), ...]
-    To actually get the data and matches, convert to tuple.
-    
+    the regular expression.
+    Returns a list of full file paths    
     Watchers should be a list of watchers to be called on each new file name
     '''
     if ignore == None: ignore = IGNORE
@@ -124,8 +123,6 @@ def get_match_paths(folder_path,
         
         if text_regexp:
             with open(path) as f:
-                # Ok, what I think I am going to do is break up the regexp
-                    # and then grep the result.
                 #TODO: check if file is a text file
                 text = f.read()
                 try:
@@ -164,7 +161,8 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
             
     return tuple(itertools.chain(html_list[:index_start], new_html_section,
                 html_list[index_end:]))
-    
+
+
 def _regpart_format_html(regpart, show_tags_on_replace = False):
     '''Formats a reg_part'''
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
@@ -228,11 +226,11 @@ def _regpart_format_html(regpart, show_tags_on_replace = False):
             get_html_span_tags(bold = True, color = repl_color,
             underlined = True), not_plain = True))
     
-    for rp in regpart_html:
+    for rp in html_list:
         rp.regpart = data
     return html_list
 
-    
+# DEV
 class RegExpBuilder(object):
     '''This class is meant to make it simple to build regular expressions by
     just setting single variables
@@ -245,8 +243,6 @@ class RegExpBuilder(object):
         s.start = None
         s.end = None
         s.middle = None
-
-
 
 if __name__ == '__main__':
     import dbe
