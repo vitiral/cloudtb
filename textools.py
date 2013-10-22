@@ -245,8 +245,7 @@ class RegGroupPart(object):
         self.indexes = [index]
         self.match_data = match_data
         self.replace_list = None
-        if match_data:
-            self.text = groups[index]
+        self.text = groups[index]
         self.data_list = None
     
     def do_replace(self, replace):
@@ -260,12 +259,14 @@ class RegGroupPart(object):
         self.replace_list = replace
         return self
     
-    def get_replaced(self):
+    def get_replaced(self, only_self = False):
         '''get the string after the replacement function has been
         performed'''
         for i in self.indexes:
-            if self.replace_list[i] != None:
+            if self.replace_list and self.replace_list[i] != None:
                 return self.replace_list[i]
+        if only_self:
+            return None
         return ''.join(n if type(n) == str else n.get_replaced() for n in
             self.data_list)
     

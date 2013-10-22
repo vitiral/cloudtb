@@ -48,7 +48,7 @@ except ValueError:
         sys.path.insert(1, '..')
         import iteration, textools
 
-def re_search_format_html(data_list, show_tags_on_replace = False):
+def re_search_format_html(data_list, show_tags_on_replace = True):
     html_list = [HtmlPart(HEADER, '', '')]
 
     for data in data_list:
@@ -169,18 +169,16 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
 
 def _regpart_format_html(regpart, show_tags_on_replace = True):
     '''Formats a reg_part'''
+    
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
 
-    if regpart.replace_list and regpart.replace_list[regpart.index] != None:
-        replace = regpart.get_replaced()
-        if replace:
-            repl_color = get_color_str(0,0,0)
-            std_color = get_color_str(255, 0, 0)
-        else:
-            std_color = get_color_str(0,0,0)
+    replace = regpart.get_replaced(only_self = True)
+    if replace != None:
+#        pdb.set_trace()
+        repl_color = get_color_str(0,0,0)
+        std_color = get_color_str(255, 0, 0)
     else:
-        replace = None
         std_color = get_color_str(0,0,0)
     
     colors = [get_color_from_index(i, len(groups)) for i in indexes]
@@ -231,7 +229,7 @@ def _regpart_format_html(regpart, show_tags_on_replace = True):
             underlined = True), not_plain = True))
     
     for rp in html_list:
-        rp.regpart = data
+        rp.regpart = regpart
     return html_list
 
 # DEV
