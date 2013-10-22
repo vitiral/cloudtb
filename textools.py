@@ -30,6 +30,7 @@ import pdb
 import os
 import re
 import iteration
+import functions
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz_'
 CMP_TYPE = type(re.compile(''))
@@ -57,8 +58,8 @@ def get_orig_researched(re_searched):
 def get_str_researched(re_searched):
     '''returns the origional string if replace has not been called,
     else returns the replacement string'''
-    strings = (n if type(n) == str else n.text if not n.replace_str \
-        else n.replace_str for n in re_searched)
+    strings = (n if type(n) == str else n.text if not n.replace_list 
+        else n.get_replaced() for n in re_searched)
     return ''.join(strings)
     
 def get_matches(researched):
@@ -104,6 +105,7 @@ def _re_search_yield(regexp, text, start = 0, end = None,
     stop = start
     if type(regexp) == str:    
         regexp = re.compile(regexp)
+    regex_groups = get_regex_groups(pat)
     match = 0
     count = 0
     prev_stop = stop
@@ -125,17 +127,14 @@ def _re_search_yield(regexp, text, start = 0, end = None,
         regs = searched.regs
         # overriding a very annoying feature of the re module where somehow
         # these can be different things depending on how the match turns out
-#        if searched.lastindex != len(groups):
-#            groups = (searched.group(0),) + groups
-        get_group = searched.group
-        
-        # yup, with the re module this is the ONLY good way to get
+        # With the re module this is the ONLY good way to get
         # every group item. groups() doesn't return it, 
         # last_index truncates with None Values... NOTHING is any good.
-        # Comming to this solution was WAY more work than it should have
-        # been. The re.search function has to be MASSIVELY re-worked.
+        # Coming to this solution was WAY more work than it should have
+        # been. The re.search function should be MASSIVELY re-worked, it is
+        # AWFUL
+        get_group = searched.group
         groups = tuple((get_group(i) for i in range(len(regs))))
-        
         span = searched.span()
         start, stop = span
         
@@ -148,7 +147,7 @@ def _re_search_yield(regexp, text, start = 0, end = None,
             continue
         
         index = iteration.first_index_ne(groups, None)
-        new_RegGroupPart = RegGroupPart(groups, index, 
+        new_RegGroupPart = RegGroupPart(groups, regex_groups, index, 
                                         match_data = (match, span, regexp))
         new_RegGroupPart.init(text, regs)
         if matches != None:
@@ -230,7 +229,7 @@ they're seen in this new light!"""
         return return_type(_re_search_yield(regexp, text, start, end))
     
 class RegGroupPart(object):
-    def __init__(self, groups, index, match_data = None):
+    def __init__(self, groups, reg_groups, index, match_data = None):
         '''
         - groups is all re.group(n)   NOTE: NOT re.search.groups(). See 
             re_search for more information
@@ -242,20 +241,33 @@ class RegGroupPart(object):
                     attributes.
         '''
         self.groups = groups
+        self.reg_groups = reg_groups
         self.indexes = [index]
         self.match_data = match_data
+        self.replace_list = None
         if match_data:
             self.text = groups[index]
-            self.replace_str = None
         self.data_list = None
     
     def do_replace(self, replace):
         '''Mostly for use with compressions'''
+        if hasattr(replace, '__call__'):
+            replace = replace(self)
+        
         if type(replace) in (str, unicode):
-            self.replace_str = replace
-        else:
-            self.replace_str = replace(self)
+            replace = (replace,)
+
+        self.replace_list = replace
         return self
+    
+    def get_replaced(self):
+        '''get the string after the replacement function has been
+        performed'''
+        for i in self.indexes:
+            if self.replace_list[i] != None:
+                return self.replace_list[i]
+        return ''.join(n if type(n) == str else n.get_replaced() for n in
+            self.data_list)
     
     def init(self, text, regs):
         '''
@@ -269,6 +281,7 @@ class RegGroupPart(object):
         It then stores them as new objects, and stores the text in between as well
         '''
         groups = self.groups
+        reg_groups = self.reg_groups
         index = self.indexes[0]
         myreg = regs[index]
         mystart, myend = myreg
@@ -297,7 +310,7 @@ class RegGroupPart(object):
             if not prev_end > cur_start and prev_end != cur_start:
                 data_list.append(text[prev_end:cur_start])
             
-            newregpart = RegGroupPart(groups, index)
+            newregpart = RegGroupPart(groups, reg_groups, index)
             converted = newregpart.init(text, regs)
             data_list.append(newregpart)
             index += converted
@@ -319,8 +332,10 @@ class RegGroupPart(object):
             start = '<*m{0}>[['.format(match)
             end = r']]'
             replace_str = self.replace_str
-            if replace_str:
+            if replace_str and not self.replace_list:
                 end += r'==>[[{0}]]'.format(replace_str)
+        if self.replace_list:
+            end += r'==>[[{0}]]'.format(self.replace_list[self.indexes[0]])
         str_data = ''.join([str(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
     
@@ -360,6 +375,113 @@ def replace_first(txt, rcmp_list, replacements):
     except StopIteration:
         raise ValueError("RegExp not found")
 
+def _get_regex_groups(itsplit, is_pattern = True):
+    '''is_pattern determines whether this level is the top level
+    pattern'''
+    named_regexp = re.compile('\?P\<.*?\>')    # named groups are the only exception
+    glist = []
+    parans = 0
+    bracks = 0
+    
+    itsplit = iter(itsplit)
+    while True:
+        try:
+            t = next(itsplit)
+        except StopIteration:
+            assert(is_pattern)
+            return glist
+        if not t:
+            continue
+        if t == '(':
+            glist.append(t)
+            while True:
+                fit, itsplit = iteration.get_first(itsplit)
+                if fit == None:
+                    next(itsplit)
+                else:
+                    break
+            if bracks > 0:
+                # it is actually inside brackets, not a valid character
+                pass
+            if len(fit) > 0 and fit[0] == '?' and not named_regexp.match(fit):
+                # it is NOT a group, some special function
+                parans += 1
+            else:
+                itsplit, gl = _get_regex_groups(itsplit, is_pattern = False)
+                glist.append(gl)
+                glist.append(')')
+        elif t == ')':
+            if bracks > 0:
+                glist.append(t)
+            else:
+                assert(parans >= 0)
+                if parans == 0:
+                    if is_pattern:
+                        # if we are the top level pattern then we shouldn't
+                        # be encountereing this
+                        assert(0)
+                    else:
+                        # Full group found -- done
+                        return itsplit, functions.reform_text(glist)
+                else:
+                    glist.append(t)
+                    parans -= 1
+        elif t == '[':
+            if bracks > 0:
+                pass    # it is a bracket in a bracket... oh boy
+            else:
+                glist.append(t)
+                bracks += 1
+        elif t == ']':
+            assert(bracks == 1)
+            glist.append(t)
+            bracks -= 1
+        else: 
+            glist.append(t)
+            
+def _convert_groups(itgroups, groups = None, top_level = True):
+    '''Converts from a list in _get_regex_groups to the actual group list in
+    order '''
+    lgroups = []
+    if top_level:
+        assert(groups == None)
+        itgroups = iter(itgroups)
+        all_groups = []
+        groups = []
+
+    for item in itgroups:
+        if type(item) == str:
+            lgroups.append(item)
+        else:   # it is a list
+            cg = _convert_groups(iter(item), groups = groups, 
+                                           top_level= False)
+            lgroups.extend(cg)
+            if top_level:
+                groups.reverse()
+                all_groups.extend(groups)
+                groups = []
+    if top_level:
+        all_groups.insert(0, ''.join(lgroups))
+        lgroups = all_groups
+    else:
+        groups.append(''.join(lgroups))
+    return lgroups
+
+def get_regex_groups(regexp):
+    re.compile(regexp) # assert valid
+    lookahead = r'(?<!\\)'
+    start_paran = r'([(])'
+    end_paran = r'([)])'
+    start_brack = r'(\[)'
+    end_brack = r'(\])'
+    greg = lookahead + ('|' + lookahead).join([start_paran, end_paran, 
+                                start_brack, end_brack])    
+    greg = re.compile(greg)
+    split = greg.split(regexp)
+    
+    list_groups = _get_regex_groups(split)
+    return _convert_groups(list_groups)
+    
 def get_rcmp_list(replacement_list):
     '''given a list of [[regex_str, replace_with], ...]
     returns the values or'ed together and the list to be 
@@ -445,7 +567,10 @@ class subfun(object):
         self.prepend = prepend
         self.postpend = postpend
         self.match_set = match_set
-        self.replace_list = replace_list
+        if replace_list != None:
+            self.replace_list, self.replacements = zip(*replace_list)
+        else:
+            self.replace_list = None
         self.subbed = []
         self.regs = []
         
@@ -456,9 +581,9 @@ class subfun(object):
             if self.replace != None:
                 txt = self.replace
             if self.replace_list != None:
-                replace_list, replacements = zip(*self.replace_list)
                 try:
-                    txt = replace_first(txt, replace_list, replacements)
+                    txt = replace_first(txt, self.replace_list, 
+                                        self.replacements)
                 except ValueError:
                     pass
             if self.match_set == None or txt in self.match_set:
@@ -535,17 +660,12 @@ def re_search_replace(researched, repl, preview = True, remove_plain = False,
     if remove_plain:
         researched = (n for n in researched if type(n) not in (str, unicode))
     
-    if preview == False:
-        if type(repl) == str:
-            out = (n if type(n) in (str, unicode) else repl for 
-                n in researched)
-        else:
-            out =  (n if type(n) in (str, unicode) else repl(n) 
-                for n in researched)
-    else:
-        out = (n if type(n) in (str, unicode) else n.do_replace(repl) for
+    out = (n if type(n) in (str, unicode) else n.do_replace(repl) for
             n in researched)
-        
+    
+    if preview == False:
+        return get_str_researched(out)
+    
     return return_type(out)
     
 def dev_research():
@@ -586,7 +706,7 @@ if __name__ == '__main__':
     from extra.researched_richtext import re_search_format_html
     from extra.richtext import get_position, deformat_html
     from extra.richtext import get_str_formated_html
-    
+    from pprint import pprint
     global out, text, true_position
     text = '''talking about expecting the Spanish Inquisition in the text below: 
     Chapman: I didn't expect a kind of Spanish Inquisition. 
@@ -608,7 +728,10 @@ if __name__ == '__main__':
     htp = deformat_html(out_str, {'font-weight':'600', 'color':'#000000'})
     hform = get_str_formated_html(htp)    
     soup = BeautifulSoup(hform)    
-    print soup.prettify()
+#    print soup.prettify()
+    print '\n', regexp
+    
+    pprint(get_regex_groups(regexp))
     
     
 

@@ -39,11 +39,16 @@ class StdWidget(QtGui.QWidget):
                 need_settings[key] = getval, setval
             else:
                 try:
-                    settings[key] = getval, eval(getexec.format(getval))
+                    gotval = eval(getexec)(*getval)
+                    if not hasattr(gotval, '__iter__'):
+                        gotval = (gotval,)
+                    settings[key] = getval, gotval
                 except Exception as E:
                     print "ERROR: Failure to save settings!"
+                    print 'Class name:', self._NAME_
                     print 'Error:', E                    
                     print "SYNTAX:", getexec, getval
+                    import pdb; pdb.set_trace()
                     
         application_settings[self._NAME_] = settings
         return need_settings
@@ -81,13 +86,15 @@ class StdWidget(QtGui.QWidget):
                 need_settings[key] = getval, setval
             else:
                 try:
-                    exec(setexec.format(n=setval))
+                    eval(setexec)(*setval)
                 except Exception as E:
-                    print "ERROR: Failure to save settings!"
+                    print "ERROR: Failure to load settings!"
+                    print 'Name', self._NAME_
                     print 'Error:', E                    
-                    print "SYNTAX:", getexec, getval
+                    print "SYNTAX:", setexec, setval
                     print '\n', 'Loading default setting'
-                    exec(key[1].format(n=std_settings[key][1]))
+#                    import pdb; pdb.set_trace()
+                    eval(key[1])(*std_settings[key][1])
         # return settings that still need to be loaded in -- 
         #  to be used in parent
         return need_settings

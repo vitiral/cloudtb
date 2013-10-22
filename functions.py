@@ -50,3 +50,21 @@ def between(value, v_min, v_max):
     return v_min < value < v_max
 
 
+def reform_text(data_list):
+    '''put all text objects that are next to eachother into single strings.
+    This simplifies a list of data'''
+    all_txt = []
+    out = []
+    
+    for item in data_list:
+        if type(item) == str:
+            all_txt.append(item)
+        else:
+            if all_txt:
+                out.append(''.join(all_txt))
+                out.append(item)
+                all_txt = []
+            
+    if all_txt:
+        out.append(''.join(all_txt))
+    return out

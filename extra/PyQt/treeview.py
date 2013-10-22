@@ -140,10 +140,10 @@ class TableViewModel(QtCore.QAbstractItemModel):
             self.is_selectable = is_selectable
         if is_enabled != None:
             self.is_enabled = is_enabled
-        
-        self.BASE_FLAGS = (QtCore.Qt.ItemIsEnabled * bool(self.is_enabled)
-            | QtCore.Qt.ItemIsSelectable * bool(self.is_selectable)
-            | QtCore.Qt.ItemIsEditable * bool(self.is_editable)
+        self.BASE_FLAGS = QtCore.Qt.ItemFlags(
+              (QtCore.Qt.ItemIsEnabled * bool(self.is_enabled))
+            | (QtCore.Qt.ItemIsSelectable * bool(self.is_selectable))
+            | (QtCore.Qt.ItemIsEditable * bool(self.is_editable))
             )
     
     """INPUTS: QModelIndex"""
@@ -211,6 +211,11 @@ class TableViewModel(QtCore.QAbstractItemModel):
     """INPUTS: QModelIndex"""
     """OUTPUT: int (flag)"""
     def flags(self, index):
+        return (QtCore.Qt.ItemIsEnabled | 
+            QtCore.Qt.ItemIsSelectable #| 
+#            QtCore.Qt.ItemIsEditable
+            )
+    def flags(self, index):
         if not index.isValid():
             return self.BASE_FLAGS
         
@@ -272,6 +277,8 @@ class TableViewModel(QtCore.QAbstractItemModel):
     
     """INPUTS: int, int, QModelIndex"""
     def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
+        if rows == 0:
+            return
         
         parentNode = self.getNode(parent)
         self.beginRemoveRows(parent, position, position + rows - 1)
@@ -285,7 +292,7 @@ class TableViewModel(QtCore.QAbstractItemModel):
         return success
     
     def clear_rows(self):
-        return self.removeRows(0, len(self._rootNode), self._rootNode)
+        return self.removeRows(0, self._rootNode.childCount())
 
 # TODO: doesn't work. Not sure how to get icons
 ICON_FOLDER = QtGui.QIcon.fromTheme('folder')

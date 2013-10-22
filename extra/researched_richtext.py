@@ -113,6 +113,7 @@ def get_match_paths(folder_path,
             fpaths.extend(get_match_paths(path,
                 file_regexp, text_regexp, recurse, 
                 max_len_searched))
+            continue
 
         if file_regexp:
             try:
@@ -125,18 +126,21 @@ def get_match_paths(folder_path,
             with open(path) as f:
                 #TODO: check if file is a text file
                 text = f.read()
+                if max_len_searched == None:
+                    max_len_searched = len(text)
                 try:
                     # find any match to text name
                     next(text_fnd(text, 0, max_len_searched))
                 except StopIteration:
                     continue
                 else:
-                    matches = []
-                    researched = textools.re_search(file_regexp, 
-                        text, start = 0, end = max_len_searched, 
-                        return_matches = matches, 
-                        return_type = iter)
-                    fpaths.append((path, researched, matches))
+                    fpaths.append(path)
+#                    matches = []
+#                    researched = textools.re_search(file_regexp, 
+#                        text, start = 0, end = max_len_searched, 
+#                        return_matches = matches, 
+#                        return_type = iter)
+#                    fpaths.append((path, researched, matches))
         else:
             fpaths.append(path)
     return fpaths
@@ -163,13 +167,13 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
                 html_list[index_end:]))
 
 
-def _regpart_format_html(regpart, show_tags_on_replace = False):
+def _regpart_format_html(regpart, show_tags_on_replace = True):
     '''Formats a reg_part'''
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
 
-    if match_data:
-        replace = regpart.replace_str
+    if regpart.replace_list and regpart.replace_list[regpart.index] != None:
+        replace = regpart.get_replaced()
         if replace:
             repl_color = get_color_str(0,0,0)
             std_color = get_color_str(255, 0, 0)
