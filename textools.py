@@ -42,7 +42,7 @@ WORD_SET.update(LOWER_LETTER_SET)
 WORD_SET.update(UPPER_LETTER_SET)
 
 def format_re_search(list_data, pretty = False):
-    '''Returns a string of researched data that is semi-seasy to read.
+    '''Returns a string of researched data that is semi-easy to read.
     If pretty == True then each item starts on it's own line with a '>>| '
     at the front (easier to read)'''
     strings = (str(n) for n in list_data)
@@ -257,6 +257,7 @@ class RegGroupPart(object):
             replace = (replace,)
 
         self.replace_list = replace
+        [n.do_replace(replace) for n in self.data_list if type(n) != str]
         return self
     
     def get_replaced(self, only_self = False):
@@ -332,11 +333,14 @@ class RegGroupPart(object):
             match = self.match_data[0]
             start = '<*m{0}>[['.format(match)
             end = r']]'
-            replace_str = self.replace_str
-            if replace_str and not self.replace_list:
-                end += r'==>[[{0}]]'.format(replace_str)
         if self.replace_list:
-            end += r'==>[[{0}]]'.format(self.replace_list[self.indexes[0]])
+            replace = None
+            for i in self.indexes:
+                if self.replace_list[i] != None:
+                    replace = self.replace_list[i]
+                    break
+            if replace:
+                end += r'==>[[{0}]]'.format(replace)
         str_data = ''.join([str(n) for n in self.data_list])
         return start + '{{{0}}}<g{1}>'.format(str_data, self.indexes) + end
     
@@ -661,13 +665,13 @@ def re_search_replace(researched, repl, preview = True, remove_plain = False,
     if remove_plain:
         researched = (n for n in researched if type(n) not in (str, unicode))
     
-    out = (n if type(n) in (str, unicode) else n.do_replace(repl) for
+    out = return_type(n if type(n) in (str, unicode) else n.do_replace(repl) for
             n in researched)
     
     if preview == False:
         return get_str_researched(out)
     
-    return return_type(out)
+    return out
     
 def dev_research():
     import dbe

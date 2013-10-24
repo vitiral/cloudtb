@@ -176,7 +176,7 @@ def _regpart_format_html(regpart, show_tags_on_replace = True):
     replace = regpart.get_replaced(only_self = True)
     if replace != None:
 #        pdb.set_trace()
-        repl_color = get_color_str(0,0,0)
+        repl_color = get_color_str(0,180,0)
         std_color = get_color_str(255, 0, 0)
     else:
         std_color = get_color_str(0,0,0)
@@ -201,7 +201,8 @@ def _regpart_format_html(regpart, show_tags_on_replace = True):
                 not_plain = True))
     if replace:
         html_list.extend(text_format_html(regpart.text, 
-            get_html_span_tags(bold = True, color = std_color), 
+            get_html_span_tags(bold = True, underlined=True, 
+                               color = std_color), 
             not_plain = False)) # want to clearly mark that this IS plain
             
     else:

@@ -40,9 +40,9 @@ class StdWidget(QtGui.QWidget):
             else:
                 try:
                     gotval = eval(getexec)(*getval)
-                    if not hasattr(gotval, '__iter__'):
-                        gotval = (gotval,)
-                    settings[key] = getval, gotval
+                    # TODO: have an Args return type that doesn't
+                    # convert to single element tuple
+                    settings[key] = getval, (gotval,)
                 except Exception as E:
                     print "ERROR: Failure to save settings!"
                     print 'Class name:', self._NAME_

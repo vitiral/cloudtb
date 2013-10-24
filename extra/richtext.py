@@ -232,7 +232,8 @@ class COLOR:
     
 KEEPIF = {
 'black-bold': {'font-weight':'600', 'color':'#' + COLOR.BLACK},
-'red-underlined-bold': {'font-weight':'600', 'color':'#' + COLOR.RED},
+'red-underlined-bold': {'font-weight':'600', 'color':'#' + COLOR.RED,
+                        'text-decoration': 'underline'},
 }
 
 def deformat_html(html, keepif, keep_plain = True):

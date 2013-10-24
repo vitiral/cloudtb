@@ -87,10 +87,10 @@ class Node(object):
     def __repr__(self):
         return self.log()
 
-class TableViewModel(QtCore.QAbstractItemModel):
+class TreeViewModel(QtCore.QAbstractItemModel):
     """INPUTS: Node, QObject"""
     def __init__(self, root, parent=None, header_title = None):
-        super(TableViewModel, self).__init__(parent)
+        super(TreeViewModel, self).__init__(parent)
         self.is_editable = False
         self.is_selectable = True
         self.is_enabled = True
@@ -367,7 +367,7 @@ def dev_show_file_list(file_objects):
     app = QtGui.QApplication(sys.argv)
     
     rootNode   = Node("Rootdir")
-    model = TableViewModel(rootNode)
+    model = TreeViewModel(rootNode)
     
     treeView = QtGui.QTreeView()
     treeView.show()
