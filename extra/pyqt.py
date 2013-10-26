@@ -48,7 +48,7 @@ class StdWidget(QtGui.QWidget):
                     print 'Class name:', self._NAME_
                     print 'Error:', E                    
                     print "SYNTAX:", getexec, getval
-                    import pdb; pdb.set_trace()
+#                    import pdb; pdb.set_trace()
                     
         application_settings[self._NAME_] = settings
         return need_settings

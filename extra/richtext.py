@@ -255,6 +255,8 @@ def deformat_html(html, keepif, keep_plain = True):
     '''
     header, footer = get_headfoot(html)
     
+#    if KEEPIF['red-underlined-bold'] in keepif:
+#        pdb.set_trace()
     bsoup = bs4.BeautifulSoup(html)
     next_el = bsoup.body.next_element
     html_list = [HtmlPart(header, '', '')]

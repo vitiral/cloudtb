@@ -48,7 +48,8 @@ except ValueError:
         sys.path.insert(1, '..')
         import iteration, textools
 
-def re_search_format_html(data_list, show_tags_on_replace = True):
+def re_search_format_html(data_list, show_tags_on_replace = True,
+                          show_replace = True):
     html_list = [HtmlPart(HEADER, '', '')]
 
     for data in data_list:
@@ -59,7 +60,8 @@ def re_search_format_html(data_list, show_tags_on_replace = True):
             html_list.extend(text_html)
         else:
             regpart_html = _regpart_format_html(data,
-                show_tags_on_replace = show_tags_on_replace)
+                show_tags_on_replace = show_tags_on_replace,
+                show_replace = show_replace)
             html_list.extend(regpart_html)
     html_list.append(HtmlPart(FOOTER, '', ''))
     html_list = tuple(n for n in html_list if bool(n))
@@ -167,15 +169,18 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
                 html_list[index_end:]))
 
 
-def _regpart_format_html(regpart, show_tags_on_replace = True):
+def _regpart_format_html(regpart, show_tags_on_replace = True,
+                         show_replace = True):
     '''Formats a reg_part'''
     
     data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
         regpart.groups, regpart.match_data)
 
-    replace = regpart.get_replaced(only_self = True)
+    if not show_replace:
+        replace = None
+    else:
+        replace = regpart.get_replaced(only_self = True)
     if replace != None:
-#        pdb.set_trace()
         repl_color = get_color_str(0,180,0)
         std_color = get_color_str(255, 0, 0)
     else:
@@ -199,9 +204,9 @@ def _regpart_format_html(regpart, show_tags_on_replace = True):
             html_list.extend(text_format_html(
                 '(', get_html_span_tags(bold = True, color = colors[i]),
                 not_plain = True))
-    if replace:
+    if replace != None:
         html_list.extend(text_format_html(regpart.text, 
-            get_html_span_tags(bold = True, underlined=True, 
+            get_html_span_tags(bold = True, underlined = True, 
                                color = std_color), 
             not_plain = False)) # want to clearly mark that this IS plain
             
@@ -224,11 +229,12 @@ def _regpart_format_html(regpart, show_tags_on_replace = True):
                 get_html_span_tags(bold = True, color = colors[i], 
                                    lower = True), not_plain = True))
     
-    if replace:
+    if replace != None:
         html_list.extend(text_format_html(replace,
             get_html_span_tags(bold = True, color = repl_color,
             underlined = True), not_plain = True))
     
+    # mark the html list so it keeps the regpart info
     for rp in html_list:
         rp.regpart = regpart
     return html_list

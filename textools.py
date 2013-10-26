@@ -473,14 +473,20 @@ def _convert_groups(itgroups, groups = None, top_level = True):
     return lgroups
 
 def get_regex_groups(regexp):
+    # TODO: This fails for "\\("
     re.compile(regexp) # assert valid
     lookahead = r'(?<!\\)'
-    start_paran = r'([(])'
-    end_paran = r'([)])'
-    start_brack = r'(\[)'
-    end_brack = r'(\])'
-    greg = lookahead + ('|' + lookahead).join([start_paran, end_paran, 
-                                start_brack, end_brack])    
+    accept_lookahead = r'(?<=\\\\)'
+    start_paran = r'[(]'
+    end_paran = r'[)]'
+    start_brack = r'\['
+    end_brack = r'\]'
+    
+    fmat = '({0}{{reg}}|{1}{{reg}})'
+    fmat = fmat.format(lookahead, accept_lookahead)
+    rlist = [fmat.format(reg = n) for n in 
+        (start_paran, end_paran, start_brack, end_brack)]
+    greg = ('|').join(rlist)    
     greg = re.compile(greg)
     split = greg.split(regexp)
     
