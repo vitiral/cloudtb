@@ -62,8 +62,8 @@ def reform_text(data_list):
         else:
             if all_txt:
                 out.append(''.join(all_txt))
-                out.append(item)
                 all_txt = []
+            out.append(item)
             
     if all_txt:
         out.append(''.join(all_txt))
