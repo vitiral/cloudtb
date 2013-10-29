@@ -58,10 +58,12 @@ def get_orig_researched(re_searched):
 def get_str_researched(re_searched):
     '''returns the origional string if replace has not been called,
     else returns the replacement string'''
-    strings = (n if type(n) == str else n.text if not n.replace_list 
+    return ''.join(get_iter_str_researched)
+
+def get_iter_str_researched(re_searched):
+    return (n if type(n) in (str, unicode) else n.text if not n.replace_list 
         else n.get_replaced() for n in re_searched)
-    return ''.join(strings)
-    
+        
 def get_matches(researched):
     '''returns an iterator of only the matches from a re_search output'''
     return (m for m in researched if type(m) != str)
