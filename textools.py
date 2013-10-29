@@ -412,17 +412,16 @@ def _get_regex_groups(itsplit, is_pattern = True):
         t = t.text
         print 'p: ', t
         if t == '(' and prev_t != '\\':
+            # We may be in a group
             glist.append(t)
-            while True:
-                fit, itsplit = iteration.get_first(itsplit)
-                if fit == None:
-                    next(itsplit)
-                else:
-                    break
+            fit, itsplit = iteration.get_first(itsplit)
+            if type(fit) not in (str, unicode):
+                fit = fit.text
             if bracks > 0:
                 # it is actually inside brackets, not a valid character
                 pass
-            if len(fit) > 0 and fit[0] == '?' and not named_regexp.match(fit):
+            elif (len(fit) > 0 and fit[0] == '?' and not 
+                    named_regexp.match(fit)):
                 # it is NOT a group, some special function
                 parans += 1
             else:
@@ -505,14 +504,11 @@ def get_regex_groups(regexp):
     rlist.extend([fmat.format(reg = n) for n in 
         (start_paran, end_paran, start_brack, end_brack)])
     greg = ('|').join(rlist)
-    print greg
     greg = re.compile(greg)
         
 #    split = greg.split(regexp)
 #    list_groups = _get_regex_groups(split)
     researched = re_search(greg, regexp, no_groups = True)
-    print format_re_search(researched, pretty = True)
-    pdb.set_trace()
     list_groups = _get_regex_groups(researched)
     return _convert_groups(list_groups)
     
