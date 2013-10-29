@@ -259,6 +259,9 @@ class RegGroupPart(object):
     
     def do_replace(self, replace):
         '''Mostly for use with compressions'''
+        if self.replace_list != None and type(replace) not in (list, tuple):
+            # an outside function modified replace_list. Keep current data
+            return self
         if hasattr(replace, '__call__'):
             replace = replace(self)
         
@@ -272,9 +275,10 @@ class RegGroupPart(object):
     def get_replaced(self, only_self = False):
         '''get the string after the replacement function has been
         performed'''
-        for i in self.indexes:
-            if self.replace_list and self.replace_list[i] != None:
-                return self.replace_list[i]
+        if type(self.replace_list) in (list, tuple):
+            for i in self.indexes:
+                if self.replace_list[i] != None:
+                    return self.replace_list[i]
         if only_self:
             return None
         return ''.join(n if type(n) == str else n.get_replaced() for n in

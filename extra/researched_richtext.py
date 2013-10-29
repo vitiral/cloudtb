@@ -168,7 +168,6 @@ def format_html_new_regpart(html_list, regpart, show_tags_on_replace = False):
     return tuple(itertools.chain(html_list[:index_start], new_html_section,
                 html_list[index_end:]))
 
-
 def _regpart_format_html(regpart, show_tags_on_replace = True,
                          show_replace = True):
     '''Formats a reg_part'''

@@ -214,7 +214,7 @@ def get_position(html_list, true_position = None, html_position = None,
         else:
             raise ValueError("Position is outside of text length" + 
                 str(html_position))
-    else: assert(False)    
+    else: assert(False)
 
     assert (out_true_pos <= out_vis_pos <= out_html_pos)
     
