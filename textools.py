@@ -85,7 +85,7 @@ def get_line(text, position, start = 0):
     return line - 1
 
 def _re_search_yield(regexp, text, start = 0, end = None, 
-                     matches = None):
+                     matches = None, no_groups = False):
     '''Internal implementation of re_search that allows for iteration. Use
     re_search with return_type = iter instead
     
@@ -107,7 +107,10 @@ def _re_search_yield(regexp, text, start = 0, end = None,
     stop = start
     if type(regexp) == str:    
         regexp = re.compile(regexp)
-    regex_groups = get_regex_groups(pat)
+    if no_groups:
+        regex_groups = None
+    else:
+        regex_groups = get_regex_groups(pat)
     match = 0
     count = 0
     prev_stop = stop
@@ -161,7 +164,8 @@ def _re_search_yield(regexp, text, start = 0, end = None,
     yield text[stop:]
 
 def re_search(regexp, text, start = 0, end = None, 
-              return_matches = None, return_type = tuple):
+              return_matches = None, return_type = tuple,
+              no_groups = False):
     '''Research your re!
     
     The same as re.search if you kept performing it after each match for
@@ -221,14 +225,17 @@ they're seen in this new light!"""
     if return_type == iter:
         if return_matches or return_matches != []:
             raise TypeError("for iterator return, matches must be None or []")
-        itresearch = _re_search_yield(regexp, text, start, end, return_matches)
+        itresearch = _re_search_yield(regexp, text, start, end, return_matches,
+                            no_groups = no_groups)
         return iter(itresearch)
     elif return_matches:
         matches = []
-        itresearch = _re_search_yield(regexp, text, start, end, matches)
+        itresearch = _re_search_yield(regexp, text, start, end, matches,
+                                      no_groups = no_groups)
         return return_type(itresearch), matches
     else:
-        return return_type(_re_search_yield(regexp, text, start, end))
+        return return_type(_re_search_yield(regexp, text, start, end,
+                                            no_groups = no_groups))
     
 class RegGroupPart(object):
     def __init__(self, groups, reg_groups, index, match_data = None):
@@ -391,15 +398,20 @@ def _get_regex_groups(itsplit, is_pattern = True):
     bracks = 0
     
     itsplit = iter(itsplit)
+    prev_t = None
     while True:
         try:
             t = next(itsplit)
         except StopIteration:
             assert(is_pattern)
             return glist
-        if not t:
+        if type(t) in (str, unicode):
+            if t:
+                glist.append(t)
             continue
-        if t == '(':
+        t = t.text
+        print 'p: ', t
+        if t == '(' and prev_t != '\\':
             glist.append(t)
             while True:
                 fit, itsplit = iteration.get_first(itsplit)
@@ -417,7 +429,7 @@ def _get_regex_groups(itsplit, is_pattern = True):
                 itsplit, gl = _get_regex_groups(itsplit, is_pattern = False)
                 glist.append(gl)
                 glist.append(')')
-        elif t == ')':
+        elif t == ')' and prev_t != '\\':
             if bracks > 0:
                 glist.append(t)
             else:
@@ -433,17 +445,18 @@ def _get_regex_groups(itsplit, is_pattern = True):
                 else:
                     glist.append(t)
                     parans -= 1
-        elif t == '[':
+        elif t == '[' and prev_t != '\\':
             if bracks > 0:
                 pass    # it is a bracket in a bracket... oh boy
             else:
                 glist.append(t)
                 bracks += 1
-        elif t == ']':
+        elif t == ']' and prev_t != '\\':
             assert(bracks == 1)
             glist.append(t)
             bracks -= 1
-        else: 
+        else:
+            assert(t in ('\\', '\\\\'))
             glist.append(t)
             
 def _convert_groups(itgroups, groups = None, top_level = True):
@@ -457,7 +470,7 @@ def _convert_groups(itgroups, groups = None, top_level = True):
         groups = []
 
     for item in itgroups:
-        if type(item) == str:
+        if type(item) in (str, unicode):
             lgroups.append(item)
         else:   # it is a list
             cg = _convert_groups(iter(item), groups = groups, 
@@ -475,24 +488,32 @@ def _convert_groups(itgroups, groups = None, top_level = True):
     return lgroups
 
 def get_regex_groups(regexp):
-    # TODO: This fails for "\\("
-    re.compile(regexp) # assert valid
+    assert(re.compile(regexp))
     lookahead = r'(?<!\\)'
-    accept_lookahead = r'(?<=\\\\)'
+#    accept_lookahead = r'(?<=\\\\)'
     start_paran = r'[(]'
     end_paran = r'[)]'
     start_brack = r'\['
     end_brack = r'\]'
-    
-    fmat = '({0}{{reg}}|{1}{{reg}})'
-    fmat = fmat.format(lookahead, accept_lookahead)
-    rlist = [fmat.format(reg = n) for n in 
-        (start_paran, end_paran, start_brack, end_brack)]
-    greg = ('|').join(rlist)    
+    double_fslash = r'(\\\\)'
+    single_fslash = r'(\\)'
+#    fmat = '({0}{{reg}}|{1}{{reg}})'
+#    fmat = fmat.format(lookahead, accept_lookahead)
+#    fmat = '({0}{{reg}})'.format(lookahead)
+    fmat = '({reg})'
+    rlist = [double_fslash, single_fslash]    
+    rlist.extend([fmat.format(reg = n) for n in 
+        (start_paran, end_paran, start_brack, end_brack)])
+    greg = ('|').join(rlist)
+    print greg
     greg = re.compile(greg)
-    split = greg.split(regexp)
-    
-    list_groups = _get_regex_groups(split)
+        
+#    split = greg.split(regexp)
+#    list_groups = _get_regex_groups(split)
+    researched = re_search(greg, regexp, no_groups = True)
+    print format_re_search(researched, pretty = True)
+    pdb.set_trace()
+    list_groups = _get_regex_groups(researched)
     return _convert_groups(list_groups)
     
 def get_rcmp_list(replacement_list):
@@ -713,7 +734,16 @@ def dev_research():
     
 #    print re_search_format_html(replaced)
 
-if __name__ == '__main__':
+def dev_get_groups():
+    import dbe
+    from pprint import pprint
+    regexp = r'\\\\\(not a group, just parans\) but the one here: \\(this is a group\\)'
+    print '\n', regexp
+    print "Converted:"
+    for n in get_regex_groups(regexp):
+        print n
+
+def dev1():
     import dbe
     import pdb
     from extra.researched_richtext import re_search_format_html
@@ -728,6 +758,7 @@ if __name__ == '__main__':
     '''
     regexp = r'''([a-zA-Z']+\s)+?expect(.*?)(the )*Spanish Inquisition(!|.)'''
     repl = r'What is this, the Spanish Inquisition?'
+    pdb.set_trace()
     researched = re_search(regexp, text)
     print text[10:30]
 #    pdb.set_trace()
@@ -742,10 +773,8 @@ if __name__ == '__main__':
     hform = get_str_formated_html(htp)    
     soup = BeautifulSoup(hform)    
 #    print soup.prettify()
-    print '\n', regexp
     
-    pprint(get_regex_groups(regexp))
+if __name__ == '__main__':
+    dev_get_groups()
     
-    
-
     
