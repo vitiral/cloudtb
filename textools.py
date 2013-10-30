@@ -53,7 +53,8 @@ def format_re_search(list_data, pretty = False):
 
 def get_orig_researched(re_searched):
     '''get original text'''
-    return ''.join((n if type(n) in (str, unicode) else n.text for n in re_searched))
+    return ''.join((n if type(n) in (str, unicode) else n.text for n in 
+        re_searched))
 
 def get_str_researched(re_searched):
     '''returns the origional string if replace has not been called,
@@ -258,27 +259,33 @@ class RegGroupPart(object):
         self.data_list = None
     
     def do_replace(self, replace):
-        '''Mostly for use with compressions'''
-        if self.replace_list != None and type(replace) not in (list, tuple):
-            # an outside function modified replace_list. Keep current data
-            return self
+        '''Performs replacement.
+        Note: if outside functions modify a value to a type other than None,
+        str, or unicode then that group value will not be replaced. This is 
+        useful if some function is "deselecting" in between replacement
+        updates (like in a gui)'''
         if hasattr(replace, '__call__'):
             replace = replace(self)
         
         if type(replace) in (str, unicode):
             replace = (replace,)
-
-        self.replace_list = replace
+        check_in = set((type(None), str, unicode))
+        if self.replace_list != None:
+            for i, r in enumerate(replace):
+                if type(self.replace_list[i]) in check_in:
+                    self.replace_list[i] = r
+        else:
+            self.replace_list = replace
         [n.do_replace(replace) for n in self.data_list if type(n) != str]
         return self
     
     def get_replaced(self, only_self = False):
         '''get the string after the replacement function has been
         performed'''
-        if type(self.replace_list) in (list, tuple):
-            for i in self.indexes:
-                if self.replace_list[i] != None:
-                    return self.replace_list[i]
+        for i in self.indexes:
+            if (self.replace_list and 
+            type(self.replace_list[i]) in (str, unicode)):
+                return self.replace_list[i]
         if only_self:
             return None
         return ''.join(n if type(n) == str else n.get_replaced() for n in
@@ -414,7 +421,6 @@ def _get_regex_groups(itsplit, is_pattern = True):
                 glist.append(t)
             continue
         t = t.text
-        print 'p: ', t
         if t == '(' and prev_t != '\\':
             # We may be in a group
             glist.append(t)

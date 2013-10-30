@@ -75,6 +75,16 @@ def _reduce_match_paths(folder_path,
     we need to search as much as possible'''
     # first we are going to break the file_regexp up into text parts 
     
+def re_search_replace(researched, repl):
+    '''Does much the same thing as textools version, but without some bells
+    and whistles and with respect to changed values.'''
+    out = []
+    for texpart in researched:
+        if type(texpart) in (str, unicode):
+            continue
+        
+    return out
+    
 
 IGNORE = '.git, '
 # DEV
