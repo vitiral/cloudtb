@@ -348,7 +348,7 @@ def get_html_converted_and_subfun(text, replace_html_list = None):
     converted_text = repl_or_re.sub(replace_fun, text)
     return converted_text, replace_fun
 
-def text_format_html(text, html_span_tags, not_plain = False,
+def text_format_html(text, html_span_tags = html_span_std, not_plain = False,
                      ignore_newlines = False):
     '''Formats a text body taking care of special html characters.
     not_plain means that no text will be counted in the HtmlPart.true_text
@@ -434,7 +434,8 @@ def text_format_html(text, html_span_tags, not_plain = False,
     if ignore_newlines:
         for n in html_list:
             assert('\n' not in n.true_text and '\n' not in n.visible_text)
-    return html_list
+    
+    return tuple(n for n in html_list if n.bool())
 
 BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
 def get_headfoot(text):
@@ -553,3 +554,10 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
         
     html_list.append(back)
     return out_el, html_list
+
+
+
+HTML_LIST_EMPTY_PARAGRAPH = HtmlPart('''</p><p style="-qt-paragraph-type:empty\
+; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-bl\
+ock-indent:0; text-indent:0px;"><br />''', '\n', '\n')
+                          

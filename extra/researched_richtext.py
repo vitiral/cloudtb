@@ -36,8 +36,8 @@ import commands
 from guitools import get_color_from_index, get_color_str
 
 from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags, 
-                      text_format_html, HtmlPart)
-
+                      text_format_html, HtmlPart, HTML_LIST_EMPTY_PARAGRAPH)
+                      
 try:
     from .. import iteration, textools
 except ValueError:
@@ -49,12 +49,36 @@ except ValueError:
         import iteration, textools
 
 def re_search_format_html(data_list, show_tags_on_replace = True,
-                          show_replace = True):
+                          show_replace = True, view_chars = None ):
     html_list = [HtmlPart(HEADER, '', '')]
-
-    for data in data_list:
+    
+    for i, data in enumerate(data_list):
         if type(data) == str:
-            text_html = text_format_html(data, html_span_std)
+            if i > 0:
+                assert(type(data_list[i-1]) != str)
+            if view_chars != None:
+                if len(data) < view_chars:
+                    prev = data
+                    cur = ''
+                elif len(data) > view_chars:
+                    prev = data[:view_chars]
+                    data = data[view_chars:]
+                    if len(data) < view_chars:
+                        cur = data
+                    else:
+                        cur = data[-view_chars:]
+                if view_chars * 2 < len(data):
+                    prev = data[:view_chars]
+                    cur = data[-view_chars:]
+                
+                text_html = list(text_format_html(prev))
+                text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
+                text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
+                if cur:
+                    text_html.extend(text_format_html(cur))
+                del prev, cur
+            else:
+                text_html = text_format_html(data, html_span_std)
             for tp in text_html:
                 tp.regpart = None
             html_list.extend(text_html)
@@ -66,6 +90,54 @@ def re_search_format_html(data_list, show_tags_on_replace = True,
     html_list.append(HtmlPart(FOOTER, '', ''))
     html_list = tuple(n for n in html_list if bool(n))
     return html_list
+
+def get_regpart_view(html_list, side_chars = 100):
+    '''format an html list with regpart data so that it only shows the regparts
+    and the number of "side_chars" before and after them'''
+    newl = text_format_html('\n')
+    is_first = True
+    cur_regpart = None
+    
+    to_count = side_chars
+    out_list = []
+    prev_text = []
+    pdb.set_trace()
+    for hpart in html_list:
+        if hasattr(hpart, 'regpart') and hpart.regpart != None:
+            if cur_regpart != hpart.regpart and not is_first:
+                out_list.append(HTML_LIST_EMPTY_PARAGRAPH)
+                out_list.append(HTML_LIST_EMPTY_PARAGRAPH)
+            cur_regpart = hpart.regpart
+            is_first = False
+            count = side_chars
+            to_extend = []
+            while count > 0 and len(prev_text):
+                prev_part = prev_text.pop()
+                ttext = prev_part.true_text
+                assert(ttext == prev_part.visible_text)
+                
+                if len(ttext) > count:
+                    ttext = ttext[len(ttext) - count:]
+                to_extend.insert(0, text_format_html(ttext))
+                count -= len(ttext)
+                assert(count >= 0)
+            del count
+            prev_text = []
+            out_list.extend(iteration.flatten(to_extend))
+            out_list.append(hpart)
+            to_count = side_chars
+            
+        else:
+            if to_count > 0:
+                ttext = hpart.true_text
+                assert(ttext == hpart.visible_text)
+                if ttext:
+                    if len(ttext) > to_count:
+                        ttext = ttext[:to_count]
+                    out_list.extend(text_format_html(ttext))
+                    to_count -= len(ttext)
+        assert(to_count >= 0)
+    return out_list
 
 def _reduce_match_paths(folder_path,
                         file_regexp, text_regexp,
@@ -182,8 +254,8 @@ def _regpart_format_html(regpart, show_tags_on_replace = True,
                          show_replace = True):
     '''Formats a reg_part'''
     
-    data_list, indexes, groups, match_data = (regpart.data_list, regpart.indexes,
-        regpart.groups, regpart.match_data)
+    data_list, indexes, groups, match_data = (regpart.data_list, 
+        regpart.indexes, regpart.groups, regpart.match_data)
 
     if not show_replace:
         replace = None
@@ -205,7 +277,8 @@ def _regpart_format_html(regpart, show_tags_on_replace = True,
                                             lower = True)
         match = match_data[0]
         
-        html_list.extend(text_format_html('{0}:'.format(match), html_span_tags,
+        html_list.extend(text_format_html('{0}:'.format(match), 
+                                          html_span_tags,
                                           not_plain = True))
 
     if show_tags_on_replace == True or replace == None:

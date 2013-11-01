@@ -275,21 +275,33 @@ class RegGroupPart(object):
                 if type(self.replace_list[i]) in check_in:
                     self.replace_list[i] = r
         else:
-            self.replace_list = replace
+            self.replace_list = list(replace)   # make a copy
         [n.do_replace(replace) for n in self.data_list if type(n) != str]
         return self
     
-    def get_replaced(self, only_self = False):
+    def get_replaced(self, only_self = False, get_index = False):
         '''get the string after the replacement function has been
         performed'''
         for i in self.indexes:
             if (self.replace_list and 
             type(self.replace_list[i]) in (str, unicode)):
-                return self.replace_list[i]
+                if get_index:
+                    return i, self.replace_list[i]
+                else:
+                    return self.replace_list[i]
+        
         if only_self:
-            return None
-        return ''.join(n if type(n) == str else n.get_replaced() for n in
-            self.data_list)
+            if get_index:
+                return None, None
+            else:
+                return None
+                
+        out = ''.join(n if type(n) == str else n.get_replaced() for n in
+                self.data_list)
+        if get_index:
+            return None, out
+        else:
+            return out
     
     def init(self, text, regs):
         '''
@@ -699,6 +711,8 @@ def re_search_replace(researched, repl, preview = True, remove_plain = False,
     '''
     if remove_plain:
         researched = (n for n in researched if type(n) not in (str, unicode))
+    
+    if preview == False: return_type = iter
     
     out = return_type(n if type(n) in (str, unicode) else n.do_replace(repl) for
             n in researched)
