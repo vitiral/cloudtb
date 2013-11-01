@@ -67,12 +67,8 @@ def re_search_format_html(data_list, show_tags_on_replace = True,
                         cur = data
                     else:
                         cur = data[-view_chars:]
-                if view_chars * 2 < len(data):
-                    prev = data[:view_chars]
-                    cur = data[-view_chars:]
                 
                 text_html = list(text_format_html(prev))
-                text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
                 text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
                 if cur:
                     text_html.extend(text_format_html(cur))
@@ -90,54 +86,6 @@ def re_search_format_html(data_list, show_tags_on_replace = True,
     html_list.append(HtmlPart(FOOTER, '', ''))
     html_list = tuple(n for n in html_list if bool(n))
     return html_list
-
-def get_regpart_view(html_list, side_chars = 100):
-    '''format an html list with regpart data so that it only shows the regparts
-    and the number of "side_chars" before and after them'''
-    newl = text_format_html('\n')
-    is_first = True
-    cur_regpart = None
-    
-    to_count = side_chars
-    out_list = []
-    prev_text = []
-    pdb.set_trace()
-    for hpart in html_list:
-        if hasattr(hpart, 'regpart') and hpart.regpart != None:
-            if cur_regpart != hpart.regpart and not is_first:
-                out_list.append(HTML_LIST_EMPTY_PARAGRAPH)
-                out_list.append(HTML_LIST_EMPTY_PARAGRAPH)
-            cur_regpart = hpart.regpart
-            is_first = False
-            count = side_chars
-            to_extend = []
-            while count > 0 and len(prev_text):
-                prev_part = prev_text.pop()
-                ttext = prev_part.true_text
-                assert(ttext == prev_part.visible_text)
-                
-                if len(ttext) > count:
-                    ttext = ttext[len(ttext) - count:]
-                to_extend.insert(0, text_format_html(ttext))
-                count -= len(ttext)
-                assert(count >= 0)
-            del count
-            prev_text = []
-            out_list.extend(iteration.flatten(to_extend))
-            out_list.append(hpart)
-            to_count = side_chars
-            
-        else:
-            if to_count > 0:
-                ttext = hpart.true_text
-                assert(ttext == hpart.visible_text)
-                if ttext:
-                    if len(ttext) > to_count:
-                        ttext = ttext[:to_count]
-                    out_list.extend(text_format_html(ttext))
-                    to_count -= len(ttext)
-        assert(to_count >= 0)
-    return out_list
 
 def _reduce_match_paths(folder_path,
                         file_regexp, text_regexp,

@@ -557,7 +557,11 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
 
 
 
-HTML_LIST_EMPTY_PARAGRAPH = HtmlPart('''</p><p style="-qt-paragraph-type:empty\
-; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-bl\
-ock-indent:0; text-indent:0px;"><br />''', '\n', '\n')
-                          
+HTML_LIST_EMPTY_PARAGRAPH = (
+HtmlPart(
+'''<p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><br /></p>'''
+, '\n', '\n')
+#HtmlPart('''</p><p style="-qt-paragraph-type:empty\
+#; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-bl\
+#ock-indent:0; text-indent:0px;"><br />''', '\n', '\n')
+)
