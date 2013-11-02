@@ -48,6 +48,26 @@ except ValueError:
         sys.path.insert(1, '..')
         import iteration, textools
 
+def _process_view(view_chars, data):
+    # TODO: Give priority to starts of new lines.
+#    dlist = data.split('\n')
+    
+    if len(data) < view_chars:
+        prev = data
+        cur = ''
+    elif len(data) > view_chars:
+        prev = data[:view_chars]
+        data = data[view_chars:]
+        if len(data) < view_chars:
+            cur = data
+        else:
+            cur = data[-view_chars:]
+    
+    text_html = list(text_format_html(prev))
+    text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
+    if cur:
+        text_html.extend(text_format_html(cur))
+    return text_html
 def re_search_format_html(data_list, show_tags_on_replace = True,
                           show_replace = True, view_chars = None ):
     html_list = [HtmlPart(HEADER, '', '')]
@@ -57,22 +77,7 @@ def re_search_format_html(data_list, show_tags_on_replace = True,
             if i > 0:
                 assert(type(data_list[i-1]) != str)
             if view_chars != None:
-                if len(data) < view_chars:
-                    prev = data
-                    cur = ''
-                elif len(data) > view_chars:
-                    prev = data[:view_chars]
-                    data = data[view_chars:]
-                    if len(data) < view_chars:
-                        cur = data
-                    else:
-                        cur = data[-view_chars:]
-                
-                text_html = list(text_format_html(prev))
-                text_html.append(HTML_LIST_EMPTY_PARAGRAPH)
-                if cur:
-                    text_html.extend(text_format_html(cur))
-                del prev, cur
+                text_html = _process_view(view_chars, data)
             else:
                 text_html = text_format_html(data, html_span_std)
             for tp in text_html:

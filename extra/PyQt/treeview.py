@@ -14,7 +14,8 @@ class Node(object):
     needs it to store.
     
     '''
-    def __init__(self, name, parent=None, icon = None, attrib_dict = None):
+    def __init__(self, name, parent=None, icon = None, 
+                 attrib_dict = None):
         
         self._name = name
         self._attrib = attrib_dict

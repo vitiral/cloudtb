@@ -38,7 +38,10 @@ class TableViewModel(QtCore.QAbstractTableModel):
     # all of them recieve an index and a node
     
     def role_display(self, index):
-        return QtCore.QString(str(self.data[index.row()][index.column()]))
+        data = self.data[index.row()][index.column()]
+        if data == None:
+            data = ''
+        return QtCore.QString(str(data))
     
     def role_edit(self, index):
         return self.role_display(index)

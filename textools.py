@@ -415,7 +415,7 @@ def replace_first(txt, rcmp_list, replacements):
 def _get_regex_groups(itsplit, is_pattern = True):
     '''is_pattern determines whether this level is the top level
     pattern'''
-    named_regexp = re.compile('\?P\<.*?\>')    # named groups are the only exception
+    named_regexp = re.compile('\?(?:P\<.*?\>)|=')    # named groups are the only exception
     glist = []
     parans = 0
     bracks = 0
