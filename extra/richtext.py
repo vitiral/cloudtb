@@ -152,7 +152,7 @@ def get_position(html_list, true_position = None, html_position = None,
         cur_html_pos += len(textrp.html_text)
         cur_true_pos += len(textrp.true_text)
         cur_vis_pos  += len(textrp.visible_text)
-        if true_position != None and cur_true_pos> true_position:
+        if true_position != None and cur_true_pos > true_position:
             break
         elif html_position != None and cur_html_pos > html_position:
             break
@@ -160,9 +160,10 @@ def get_position(html_list, true_position = None, html_position = None,
             break
         prev_hpos, prev_tpos, prev_vpos = (cur_html_pos, cur_true_pos, 
                                            cur_vis_pos)
+    else:
+        raise ValueError("Position is outside of text length " + 
+            str((true_position, html_position, visible_position)))
     
-    # going to take a bit more work -- for visual I need to ALSO figure out
-    # if it is inside of a visual section!!!
     if true_position != None:
         out_true_pos = true_position
         relative_pos = true_position - prev_tpos
@@ -512,16 +513,15 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
     front, back = fback; del fback
     style = bs_paragraph.attrs['style']
     style_attrs = get_style_attributes(style)
-    no_newline = False    
-    try:
-        # Apparently there is such a thing as an "empty paragraph" that
-        # doesn't trigger a line ending! What an annoying "feature"
-        if style_attrs['-qt-paragraph-type'] == 'empty':
-            no_newline = True
-    except KeyError:
-        pass
+    no_newline = False
+#    try:
+#        # Apparently there is such a thing as an "empty paragraph" that
+#        # doesn't trigger a line ending! What an annoying "feature"
+#        if style_attrs['-qt-paragraph-type'] == 'empty':
+#            no_newline = True
+#    except KeyError:
+#        pass
     front = HtmlPart(front, '', '')
-    
     
 #    -qt-paragraph-type:empty
     if no_newline:

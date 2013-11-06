@@ -28,6 +28,8 @@
 
 # commiting a change from spyder
 PYTHON_VERSION = 2
+CLOUD_TB_VERSION = None
+
 '''Add your file types to list below -- comma separated'''
 FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
 
@@ -72,8 +74,6 @@ import sys
 
 import textools
 
-
-    
 def update_license(path):
     '''updates the license information and the first line of the file
     for the file on the path'''
@@ -124,6 +124,12 @@ def update_license(path):
         with open(path, 'w') as f:
             f.write(text)
 
+def update_cloudtb(cloud_tb_version):
+    # see http://stackoverflow.com/questions/791959/how-to-use-git-to-download-a-particular-tag
+    git_archive = ('git archive --format=zip '
+         '--remote=[{hostname}]:[{repo_path}][{tag_name}] '
+         '> {out_file_path}')
+    
 '''
 Publish
 
