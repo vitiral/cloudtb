@@ -27,8 +27,11 @@
 #    http://opensource.org/licenses/MIT
 
 # commiting a change from spyder
+import pdb
+
 PYTHON_VERSION = 2
-CLOUD_TB_VERSION = None
+CLOUDTB_VERSION_URL = None
+VERSION = '0.1.2'
 
 '''Add your file types to list below -- comma separated'''
 FILE_TYPES = '.c, .h, .cpp, .hpp, .txt, .py'
@@ -37,31 +40,42 @@ FIRST_LINE = '#!/usr/bin/python'
 SECOND_LINE = '# -*- coding: utf-8 -*-'
 
 YOUR_LICENSE = '''
-#    The MIT License (MIT)
+#    ******  The Cloud Toolbox v{0}******
+#    This is the cloud toolbox -- a single module used in several packages
+#    found at <https://github.com/cloudformdesign>
+#    For more information see <cloudformdesign.com>
+#
+#    This module may be a part of a python package, and may be out of date.
+#    This behavior is intentional, do NOT update it.
+#    
+#    You are encouraged to use this pacakge, or any code snippets in it, in
+#    your own projects. Hopefully they will be helpful to you!
+#        
+#    This project is Licenced under The MIT License (MIT)
 #    
 #    Copyright (c) 2013 Garrett Berg cloudformdesign.com
 #    An updated version of this file can be found at:
-#    https://github.com/cloudformdesign/cloudtb
+#    <https://github.com/cloudformdesign/cloudtb>
 #    
-#    Permission is hereby granted, free of charge, to any person obtaining a copy
-#    of this software and associated documentation files (the "Software"), to deal
-#    in the Software without restriction, including without limitation the rights
-#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#    copies of the Software, and to permit persons to whom the Software is
-#    furnished to do so, subject to the following conditions:
+#    Permission is hereby granted, free of charge, to any person obtaining a 
+#    copy of this software and associated documentation files (the "Software"),
+#    to deal in the Software without restriction, including without limitation 
+#    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+#    and/or sell copies of the Software, and to permit persons to whom the 
+#    Software is furnished to do so, subject to the following conditions:
 #    
 #    The above copyright notice and this permission notice shall be included in
 #    all copies or substantial portions of the Software.
 #    
 #    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-#    THE SOFTWARE.
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+#    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+#    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+#    DEALINGS IN THE SOFTWARE.
 #
-'''
+'''.format(VERSION)
 LAST_LINE = '#    http://opensource.org/licenses/MIT'
 
 KEEP_LICENSE = '*** KEEP LICENSE ***'
@@ -71,8 +85,12 @@ import pdb
 import re
 import os
 import sys
+import shutil
 
 import textools
+
+PUBLISH_FOLDER = '_publish'
+CLOUDTB_PACKAGE_STR = 'cloudtb'
 
 def update_license(path):
     '''updates the license information and the first line of the file
@@ -118,18 +136,77 @@ def update_license(path):
     else:
         text = full_header + '\n' + text
     
-    uin = raw_input("About to overwrite license for \n<" + path + '>\n. Press y '
-        'if ok')
-    if uin.lower() == 'y':
-        with open(path, 'w') as f:
-            f.write(text)
+#    uin = raw_input("About to overwrite license for \n<" + path + '>\n. Press y '
+#        'if ok')
+#    if uin.lower() == 'y':
+    with open(path, 'w') as f:
+        f.write(text)
 
-def update_cloudtb(cloud_tb_version):
-    # see http://stackoverflow.com/questions/791959/how-to-use-git-to-download-a-particular-tag
-    git_archive = ('git archive --format=zip '
-         '--remote=[{hostname}]:[{repo_path}][{tag_name}] '
-         '> {out_file_path}')
+def update_cloudtb(path):
+    import urllib
+    import zipfile
     
+    ctb_path = os.path.join(path, PUBLISH_FOLDER)
+    ctb_path = os.path.join(ctb_path, os.path.split(path)[1])
+    ctb_path = os.path.join(ctb_path, CLOUDTB_PACKAGE_STR)
+    if os.path.exists(ctb_path):
+        shutil.rmtree(ctb_path)
+    pubpath = os.path.join(path, PUBLISH_FOLDER)
+    if not os.path.isdir(pubpath):
+        os.mkdir(pubpath)
+    
+    
+    urllib.urlretrieve(CLOUDTB_VERSION_URL,
+                       filename=ctb_path + '.zip')
+    
+    with zipfile.ZipFile(ctb_path + '.zip') as zf:
+        zf.extractall(ctb_path)
+    bad_path = os.listdir(ctb_path)
+    assert(len(bad_path) == 1)
+    bad_path = os.path.join(ctb_path, bad_path[0])
+    for f in os.listdir(bad_path):
+        old_path = os.path.join(bad_path, f)
+        new_path = os.path.join(ctb_path, f)
+        shutil.move(old_path, new_path)
+    os.rmdir(bad_path)
+#    os.popen('unzip ' + )
+#    for n in os.listdir(path):
+#        p = os.path.join(path, n)
+#        if n.find('cloudtb') == 0 and os.path.isdir(p):
+#            os.rename(p, ctb_path)
+#            break
+#    files = os.listdir(pubpath)
+#    zip_ctb_fname = next(f for f in files if PUBLISH_FOLDER in f)
+#    zip_ctb_path = os.path.join(path, zip_ctb_fname)
+#    os.popen('mv -r {0} {1}'.format(zip_ctb_path, ctb_path))
+
+def copy_files(cur_dir = None):
+    if cur_dir == None:
+        cur_dir = os.getcwd()
+    
+    pubfolder = os.path.join(cur_dir, PUBLISH_FOLDER)
+    if os.path.exists(pubfolder):
+        if os.path.isdir(pubfolder):
+            shutil.rmtree(pubfolder)
+        else:
+            print "removing _publish as file... odd"
+            os.remove(pubfolder)
+    os.mkdir(pubfolder)
+    pubfolder = os.path.join(pubfolder, os.path.split(cur_dir)[1])
+    os.mkdir(pubfolder)
+    fnames = os.listdir(cur_dir)
+    for f in fnames:
+        path = os.path.join(cur_dir, f)
+        print f,
+        if f in (PUBLISH_FOLDER, '.git', 'dist'):
+            print 'ignored'
+            continue
+        elif os.path.isdir(path):
+            print 'copy dir'
+            shutil.copytree(path, os.path.join(pubfolder, f))
+        else:
+            print 'copy file'
+            shutil.copy2(path, pubfolder)
 '''
 Publish
 
@@ -165,6 +242,9 @@ def main():
         print path
     
     update_license(path)
+    copy_files(path)    
+    if CLOUDTB_VERSION_URL:
+        update_cloudtb(path)
     
 if __name__ == '__main__':
     main()
