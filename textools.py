@@ -70,7 +70,7 @@ def get_orig_researched(re_searched):
 def get_str_researched(re_searched):
     '''returns the origional string if replace has not been called,
     else returns the replacement string'''
-    return ''.join(get_iter_str_researched)
+    return ''.join(get_iter_str_researched(re_searched))
 
 def get_iter_str_researched(re_searched):
     return (n if type(n) in (str, unicode) else n.text if not n.replace_list 
@@ -378,8 +378,9 @@ class RegGroupPart(object):
             end = r']]'
         if self.replace_list:
             replace = None
+            len_rl = len(self.replace_list)
             for i in self.indexes:
-                if self.replace_list[i] != None:
+                if i < len_rl and self.replace_list[i] != None:
                     replace = self.replace_list[i]
                     break
             if replace:

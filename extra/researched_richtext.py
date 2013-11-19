@@ -48,7 +48,8 @@ from guitools import get_color_from_index, get_color_str
 
 from richtext import (HEADER, FOOTER, html_span_std, get_html_span_tags, 
                       text_format_html, HtmlPart, HTML_LIST_EMPTY_PARAGRAPH)
-                      
+import richtext
+
 try:
     from .. import iteration, textools
 except ValueError:
@@ -79,8 +80,10 @@ def _process_view(view_chars, data):
     if cur:
         text_html.extend(text_format_html(cur))
     return text_html
+
 def re_search_format_html(data_list, show_tags_on_replace = True,
                           show_replace = True, view_chars = None ):
+    
     html_list = [HtmlPart(HEADER, '', '')]
     
     for i, data in enumerate(data_list):

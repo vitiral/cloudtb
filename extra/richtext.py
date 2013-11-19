@@ -105,6 +105,11 @@ PARAGRAPH_SPAN = ('''<p style=" margin-top:0px; margin-bottom:0px; '''
 '''margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'''
 , '''</p>''')
 
+EMPTY_PARAGRAPH = ('''<p style=" -qt-paragraph-type:empty; '''
+'''margin-top:0px; margin-bottom:0px; '''
+'''margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'''
+)
+
 html_span_std = ('', '')
 
 span_template = ('''<span style="{bold}{underlined}{color}'''
@@ -122,7 +127,7 @@ html_replace_str_list = [
 [r'>'    ,r'&gt;'],
 #[r'\&'  ,r'&amp;'],
 [r'&'    ,r'&amp;'],
-[r'"'    , r'&quot'],
+[r'"'    , r'&quot;'],
 ['\n'    , ''.join(PARAGRAPH_SPAN[::-1])], # ALWAYS make sure this 
                                            #is the last line!
 ]                                # The application depends on it!
@@ -473,8 +478,22 @@ def text_format_html(text, html_span_tags = html_span_std, not_plain = False,
     if ignore_newlines:
         for n in html_list:
             assert('\n' not in n.true_text and '\n' not in n.visible_text)
-    
-    return tuple(n for n in html_list if n.bool())
+    html_list = list(n for n in html_list if n.bool())
+#    html_list = handle_empty_paragraphs(html_list)
+    return html_list
+
+#def handle_empty_paragraphs(html_list):
+#    for i, hpart in enumerate(html_list):
+#        if PARAGRAPH_SPAN[0] in hpart.html_text:
+#            if i == len(html_list) - 1:
+##                assert(0)
+#                break
+#            if html_list[i+1].visible_text == '':
+#                htext = ''
+#                if PARAGRAPH_SPAN[1] in hpart.html_text:
+#                    htext = PARAGRAPH_SPAN[1]
+#                html_list[i].html_text = htext + EMPTY_PARAGRAPH
+#    return html_list
 
 BODY_REGEXP = r'([\w\W]*<body [\w\W]*?>)([\w\W]*?)(</body>[\w\W]*)'
 def get_headfoot(text):
@@ -547,6 +566,7 @@ def html_process_span(bs_span, keepif, keep_plain):
     return out_elem, html_list
 
 def html_process_paragraph(bs_paragraph, keepif, keep_plain):
+#    pdb.set_trace()
     body, fback = get_named_body_frontback(str(bs_paragraph), 'p')
     front, back = fback; del fback
     style = bs_paragraph.attrs['style']
@@ -582,6 +602,7 @@ def html_process_paragraph(bs_paragraph, keepif, keep_plain):
                 not_plain = not keep_plain, ignore_newlines = True))
             next_el = next_el
         elif next_el.name == 'br':
+            pass
             html_list.append(HtmlPart(str(next_el), '', ''))
         else:
             assert(next_el.name == 'span')

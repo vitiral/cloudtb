@@ -89,7 +89,11 @@ import shutil
 
 import textools
 
-PUBLISH_FOLDER = '_publish'
+# for outside setup scripts
+ctb_packages = ['cloudtb', 'cloudtb.extra', 'cloudtb.extra.PyQt', 
+                  'cloudtb.tests', 'cloudtb.external',]
+                  
+PUBLISH_FOLDER = 'publish'
 CLOUDTB_PACKAGE_STR = 'cloudtb'
 
 def update_license(path):
@@ -155,6 +159,10 @@ def update_cloudtb(path):
     if not os.path.isdir(pubpath):
         os.mkdir(pubpath)
     
+    if os.path.exists(CLOUDTB_VERSION_URL):
+        # if it is a directory, just copy it.
+        shutil.copytree(CLOUDTB_VERSION_URL, ctb_path)
+        return
     
     urllib.urlretrieve(CLOUDTB_VERSION_URL,
                        filename=ctb_path + '.zip')
@@ -234,8 +242,8 @@ def main():
     if len(sys.argv) < 2:
         path = os.getcwd()
     else:
-        parser = argparse.ArgumentParser(description = "Update License Files for "
-        "python project")
+        parser = argparse.ArgumentParser(description = 
+            "Update License Files for python project")
         parser.add_argument('path', type = str, help='path to file or folder')
         args = parser.parse_args()
         path = args.path

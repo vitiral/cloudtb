@@ -126,7 +126,7 @@ def log_fatal_exception():
       if previous_except_hook:
          previous_except_hook(exctype, value, tb)
 
-      log = getLogger('FATAL_EXCEPTION')
+      log = get_logger('FATAL_EXCEPTION')
       log.critical(str(exctype) + '\n' + str(value) + '\n' + 
           ''.join(traceback.format_tb(tb)))
 
