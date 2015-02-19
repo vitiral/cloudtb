@@ -73,6 +73,17 @@ def unpack(data, header=None):
     return out
 
 
+def flatten(data, start=()):
+    '''Flattens a dictionary so that the keys are all tuples of keys'''
+    flat = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            flat.update(flatten(value, start=start + (key,)))
+        else:
+            flat[start + (key,)] = value
+    return flat
+
+
 def fill_dict(data, filler):
     '''Makes all dictionary keys tuples of the same length'''
     keys, values = zip(*data.items())
