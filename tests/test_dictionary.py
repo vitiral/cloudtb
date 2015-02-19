@@ -54,3 +54,15 @@ class TestFill(TestCase):
         flat = dictionary.flatten(basic_dict)
         filled = dictionary.fill_keys(flat)
         self.assertEqual(set(keys), set(filled))
+
+
+class TestUpdate(TestCase):
+    def test_basic(self):
+        newkeys = dict(hi='hello', ho='goodbye')
+        bdict = dict(basic_dict)
+        bdict.update(newkeys)
+
+        mydict = dict(basic_dict)
+        newkeys['no'] = 'not here'
+        dictionary.update(mydict, newkeys, ('hello', 'goodbye'))
+        self.assertDictEqual(bdict, mydict)
