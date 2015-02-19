@@ -48,7 +48,7 @@ def getitem(dic, item):
 
 def setitem(dic, item, value):
     '''Dictionary item setting with tuples'''
-    for k, i in enumerate(item):
+    for i, k in enumerate(item):
         if i < len(item) - 1:
             if k not in dic:
                 dic[k] = {}
@@ -66,10 +66,12 @@ def unpack(data, header=None):
     according to the header'''
     if header is None:
         header = get_header(data[0])
-    out = {key: [] for key in header}
+    out = dict()
+    for key in header:
+        setitem(out, key, [])
     for d in data:
         for h in header:
-            out[h].append(getitem(d, h))
+            getitem(out, h).append(getitem(d, h))
     return out
 
 

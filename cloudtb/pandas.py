@@ -27,6 +27,7 @@ def dataframe_dict(data, index=None, filler='', header=None):
         if header is None:
             header = dictionary.get_header(data[0])
         data = dictionary.unpack(data, header)
+        data = dictionary.flatten(data)
     data = dictionary.fill_dict(data, filler)
     data = pd.DataFrame.from_dict(data)
     if index is not None:
