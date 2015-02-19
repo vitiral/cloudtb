@@ -25,3 +25,15 @@ class TestGetItem(TestCase):
 
     def test_level_2(self):
         self.assertEqual(dictionary.getitem(basic_dict, ('self', 'b')), 1)
+
+
+class TestUnpack(TestCase):
+    def test_basic(self):
+        diclist = [basic_dict for _ in range(10)]
+        checkdict = {key: list((i,) * 10) for
+                     i, key in enumerate(names)}
+        checkdict['self'] = dict(checkdict)
+        # TODO: unpack currently uses the header, which makes sense
+        # but shouldn't be the default
+        unpacked = dictionary.unpack(diclist)
+        self.assertDictEqual(unpacked, checkdict)

@@ -26,8 +26,8 @@ def dataframe_dict(data, index=None, filler='', header=None):
         header = resolve_header(header)
         if header is None:
             header = dictionary.get_header(data[0])
-        data = dictionary.unpack_dicts(data, header)
-    data = fill_dict(data, filler)
+        data = dictionary.unpack(data, header)
+    data = dictionary.fill_dict(data, filler)
     data = pd.DataFrame.from_dict(data)
     if index is not None:
         data.set_index(index, inplace=True)
@@ -45,11 +45,3 @@ def resolve_header(header):
         return header
 
 
-def fill_dict(data, filler):
-    '''Makes all dictionary keys tuples of the same length'''
-    keys, values = zip(*data.items())
-    # convert all keys to tuples
-    keys = tuple(key if isinstance(key, tuple) else (key,) for key in keys)
-    maxlen = max(map(len, keys))
-    return {key + ((filler,) * (maxlen - len(key))): value for (key, value)
-            in zip(keys, values)}

@@ -46,14 +46,41 @@ def getitem(dic, item):
     return dic
 
 
-def unpack_dicts(data, header):
+def setitem(dic, item, value):
+    '''Dictionary item setting with tuples'''
+    for k, i in enumerate(item):
+        if i < len(item) - 1:
+            if k not in dic:
+                dic[k] = {}
+            dic = dic[k]
+        else:
+            dic[k] = value
+            break
+    else:
+        assert False
+    return dic
+
+
+def unpack(data, header=None):
     '''Unpacks a list of dictionaries into a dictionary of lists
     according to the header'''
+    if header is None:
+        header = get_header(data[0])
     out = {key: [] for key in header}
     for d in data:
         for h in header:
             out[h].append(getitem(d, h))
     return out
+
+
+def fill_dict(data, filler):
+    '''Makes all dictionary keys tuples of the same length'''
+    keys, values = zip(*data.items())
+    # convert all keys to tuples
+    keys = tuple(key if isinstance(key, tuple) else (key,) for key in keys)
+    maxlen = max(map(len, keys))
+    return {key + ((filler,) * (maxlen - len(key))): value for (key, value)
+            in zip(keys, values)}
 
 
 def update(todict, fromdict, keys=None):
