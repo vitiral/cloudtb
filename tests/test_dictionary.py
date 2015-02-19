@@ -64,5 +64,16 @@ class TestUpdate(TestCase):
 
         mydict = dict(basic_dict)
         newkeys['no'] = 'not here'
-        dictionary.update(mydict, newkeys, ('hello', 'goodbye'))
+        dictionary.update(mydict, newkeys, ('hi', 'ho'))
+        self.assertDictEqual(bdict, mydict)
+
+
+class TestRemove(TestCase):
+    def test_basic(self):
+        bdict = dict(basic_dict)
+        bdict.pop('a')
+        bdict.pop('b')
+
+        mydict = dict(basic_dict)
+        dictionary.remove(mydict, ('a', 'b'))
         self.assertDictEqual(bdict, mydict)
