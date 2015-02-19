@@ -28,7 +28,7 @@ def dataframe_dict(data, index=None, filler='', header=None):
             header = dictionary.get_header(data[0])
         data = dictionary.unpack(data, header)
         data = dictionary.flatten(data)
-    data = dictionary.fill_dict(data, filler)
+    data = dictionary.fill_keys(data, filler)
     data = pd.DataFrame.from_dict(data)
     if index is not None:
         data.set_index(index, inplace=True)

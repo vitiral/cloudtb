@@ -86,7 +86,7 @@ def flatten(data, start=()):
     return flat
 
 
-def fill_dict(data, filler):
+def fill_keys(data, filler=None):
     '''Makes all dictionary keys tuples of the same length'''
     keys, values = zip(*data.items())
     # convert all keys to tuples

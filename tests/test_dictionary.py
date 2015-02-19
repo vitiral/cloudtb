@@ -33,10 +33,8 @@ class TestUnpack(TestCase):
         checkdict = {key: list((i,) * 10) for
                      i, key in enumerate(names)}
         checkdict['self'] = dict(checkdict)
-        # TODO: unpack currently uses the header, which makes sense
-        # but shouldn't be the default
         unpacked = dictionary.unpack(diclist)
-        # self.assertDictEqual(unpacked, checkdict)
+        self.assertDictEqual(unpacked, checkdict)
 
 
 class TestFlatten(TestCase):
@@ -46,3 +44,13 @@ class TestFlatten(TestCase):
         # import ipdb; ipdb.set_trace()
         flat = dictionary.flatten(basic_dict)
         self.assertEqual(set(keys), set(flat.keys()))
+
+
+class TestFill(TestCase):
+    def test_basic(self):
+        keys = [(n, None) for n in names]
+        keys.extend(('self', n) for n in names)
+        # import ipdb; ipdb.set_trace()
+        flat = dictionary.flatten(basic_dict)
+        filled = dictionary.fill_keys(flat)
+        self.assertEqual(set(keys), set(filled))
