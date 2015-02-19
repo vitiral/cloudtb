@@ -11,6 +11,8 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 '''
 from enum import Enum
 import imp
+import itertools
+import collections
 
 
 def importpath(name, path):
@@ -76,3 +78,29 @@ def decode(data, encoding="utf-8", errors="strict"):
         return encode(decode(data, encoding, errors), encoding, errors)
     else:
         raise TypeError("Cannot decode data: {}".format(data))
+
+
+def consume(iterator, n=None):
+    "Advance the iterator n-steps ahead. If n is none, consume entirely."
+    # Use functions that consume iterators at C speed.
+    if n is None:
+        # feed the entire iterator into a zero-length deque
+        collections.deque(iterator, maxlen=0)
+    else:
+        # advance to the empty slice starting at position n
+        next(itertools.islice(iterator, n, n), None)
+
+
+def throw(exception):
+    '''Raises an exception. Can be used inside compressions'''
+    raise exception
+
+
+def raises(exception, function, *args, **kwargs):
+    '''runs function with args and kwargs. Returns True if it raised exception
+    '''
+    try:
+        function(*args, **kwargs)
+        return False
+    except exception:
+        return True

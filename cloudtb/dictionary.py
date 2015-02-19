@@ -10,12 +10,16 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
 
+import itertools
 
-def dict_depth(d, depth=0):
+from cloudtb import builtin
+
+
+def depth(d, deep=0):
     '''Find the depth of a nested dictionary'''
     if not isinstance(d, dict) or not d:
-        return depth
-    return max(dict_depth(v, depth + 1) for k, v in d.items())
+        return deep
+    return max(depth(v, deep + 1) for k, v in d.items())
 
 
 def get_header(item, extra_levels=None, filler=''):
@@ -24,7 +28,7 @@ def get_header(item, extra_levels=None, filler=''):
     Very useful in pandas'''
     levels = extra_levels
     if levels is None:
-        levels = dict_depth(item)
+        levels = depth(item)
     keys = []
     for key, value in item.items():
         if isinstance(value, dict):
@@ -35,7 +39,7 @@ def get_header(item, extra_levels=None, filler=''):
     return keys
 
 
-def get_item(dic, item):
+def getitem(dic, item):
     '''Dictionary item access with tuples'''
     for i in item:
         dic = dic[i]
@@ -48,5 +52,27 @@ def unpack_dicts(data, header):
     out = {key: [] for key in header}
     for d in data:
         for h in header:
-            out[h].append(get_item(d, h))
+            out[h].append(getitem(d, h))
     return out
+
+
+def update(todict, fromdict, keys=None):
+    '''Copy only keys from one dictionary to another
+
+    keys=None is equivalent to todict.update(fromdict)
+    '''
+    todict.update(fromdict if keys is None else
+                  {key: fromdict[key] for key in keys})
+
+
+def remove(obj, keys, check=True):
+    '''remove unwanted keys
+    Arguments:
+        obj -- object on which keys should be removed
+        keys -- iterator of keys to remove
+        check -- whether to check whether keys exist
+        '''
+    if check:
+        builtin.consume(map(obj.pop, keys))
+    else:
+        builtin.consume(map(obj.pop, keys, itertools.repeat(None)))
