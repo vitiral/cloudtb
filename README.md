@@ -1,7 +1,8 @@
 # Cloud Toolbox (cloudtb)
 
 This library contains various convinience functions that can be used for common problems in python.
-Each library is named according to the library/function they are targeting.
+Each library is named according to the library/function they are targeting. Most of these
+modules target distributions of scientific python and data analysis
 
 The cloudtb should be used something like:
 ```
