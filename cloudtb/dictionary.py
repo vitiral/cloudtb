@@ -15,11 +15,13 @@ import itertools
 from cloudtb import builtin
 
 
-def depth(d, deep=0):
+def depth(d, deep=0, isiter=False):
     '''Find the depth of a nested dictionary'''
-    if not isinstance(d, dict) or not d:
+    if not isinstance(d, dict) or not d:  # not a dict or an empty dict
+        builtin.throw(TypeError) if isiter and \
+            not builtin.isiter(d) else None
         return deep
-    return max(depth(v, deep + 1) for k, v in d.items())
+    return max(depth(v, deep + 1, isiter) for k, v in d.items())
 
 
 def get_header(item, extra_levels=None, filler=''):
@@ -66,7 +68,7 @@ def unpack(data, header=None):
     according to the header'''
     if header is None:
         header = get_header(data[0])
-    out = dict()
+    out = type(data[0])()
     for key in header:
         setitem(out, key, [])
     for d in data:
@@ -77,7 +79,7 @@ def unpack(data, header=None):
 
 def flatten(data, start=()):
     '''Flattens a dictionary so that the keys are all tuples of keys'''
-    flat = {}
+    flat = type(data)()
     for key, value in data.items():
         if isinstance(value, dict):
             flat.update(flatten(value, start=start + (key,)))
@@ -92,8 +94,8 @@ def fill_keys(data, filler=None):
     # convert all keys to tuples
     keys = tuple(key if isinstance(key, tuple) else (key,) for key in keys)
     maxlen = max(map(len, keys))
-    return {key + ((filler,) * (maxlen - len(key))): value for (key, value)
-            in zip(keys, values)}
+    return type(data)({key + ((filler,) * (maxlen - len(key))): value for
+                       (key, value) in zip(keys, values)})
 
 
 def update(todict, fromdict, keys=None):
