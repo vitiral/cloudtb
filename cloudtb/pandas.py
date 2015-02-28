@@ -10,27 +10,24 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
 import pandas as pd
-from cloudtb import dictionary
+from cloudtb.dictionary import get_header, unpack, flatten, fill_keys, depth
+from . import builtin
 
 
 def _dataframe_dict(data, index=None, filler='', header=None):
     if isinstance(data, dict):
         try:
-            if dictionary.depth(data, isiter=True) < 2:
+            if depth(data, isiter=True) < 2:
                 return data
         except TypeError:
             return data
-    if isinstance(data, dict):
+    if not isinstance(data, dict):
         header = resolve_header(header)
         if header is None:
-            header = dictionary.get_header(data)
-    else:
-        header = resolve_header(header)
-        if header is None:
-            header = dictionary.get_header(data[0])
-        data = dictionary.unpack(data, header)
-        data = dictionary.flatten(data)
-    data = dictionary.fill_keys(data, filler)
+            header = get_header(data[0])
+        data = unpack(data, header)
+    data = flatten(data)
+    data = fill_keys(data, filler)
     return data
 
 
@@ -52,8 +49,24 @@ def resolve_header(header):
     if header is None:
         return None
     if isinstance(header, dict):
-        return dictionary.get_header(header)
+        return get_header(header)
     else:
         return header
 
 
+def add_level(df, level, name=None):
+    '''Adds a level onto a dataframe's column index'''
+    if builtin.isiter(level):
+        raise NotImplementedError
+    else:
+        cols = df.columns
+        if isinstance(cols, pd.MultiIndex):
+            levels = cols.levels + [[level]]
+            labels = cols.labels + [[0] * len(cols.labels[0])]
+            names = cols.names + [name]
+            cols = pd.MultiIndex(levels=levels, labels=labels, names=names)
+        else:
+            cols = pd.MultiIndex.from_tuples(
+                tuple(zip(cols, (level,) * len(cols))))
+        df.columns = cols
+    return df
