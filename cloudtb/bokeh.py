@@ -32,10 +32,52 @@ def get_bins(x, y, bins):
         yield x, y
         raise StopIteration
     for i in range(len(y) // bins, len(y) - 1, len(y) // bins):
-        yield x[prev:i], y[prev:i]
+        yx, yy = x[prev:i], y[prev:i]
+        assert len(yx) == len(yy)
+        yield yx, yy
         prev = i
     if prev < len(x) - 1:
-        yield x[prev:], y[prev:]
+        yx, yy = x[prev:], y[prev:]
+        assert len(yx) == len(yy)
+        yield yx, yy
+
+
+def get_time_bins(series, window):
+    '''Returns data in time bins (in seconds).
+    Bins must be on the index of the series'''
+    start = min(series.index)
+    end = max(series.index)
+    prev = start
+    print("Times:", start, end, window)
+    for t in np.arange(start, end, window):
+        yield series[prev:t]
+        prev = t
+    yield series[prev:]
+
+
+def time_slopes(series, window):
+    series = series.dropna()
+    mx, my = [], []
+    for s in get_time_bins(series, window):
+        bx, by = s.index, s.values
+        # print(bx, by)
+        m, c, r_value, p_value, std_err = stats.linregress(bx, by)
+        mx.append(np.mean(bx))
+        my.append(m)
+    return mx, my
+
+
+def slopes(series, perbin=10):
+    series = series.dropna()
+    x, y = series.index, series.values
+    bins = len(series) // perbin
+    data = []
+    mx = []
+    for bx, by in get_bins(x, y, bins):
+        m, c, r_value, p_value, std_err = stats.linregress(bx, by)
+        data.append(m)
+        mx.append(np.mean(bx))
+    return mx, data
 
 
 def linear_fit(x, y, bins=None):
@@ -106,9 +148,9 @@ def scatter(fig, x, y, bins, color='blue', name=None, **kwargs):
     drange = max(y) - min(y)
     if len(y) <= bins:
         return fig.line(x, y, color=color, legend=name,
-                        line_width=2, **kwargs)
+                        line_width=1, **kwargs)
     linex, liney = mean_fit(x, y, bins)
-    fig.circle(x, y, radius=drange / 1e3, fill_alpha=opaque, line_alpha=opaque,
+    fig.circle(x, y, radius=1, fill_alpha=opaque, line_alpha=opaque,
                line_color=color, fill_color=color, legend=name, **kwargs)
     return fig.line(linex, liney, line_color=color,
                     legend=name, **kwargs)
@@ -178,12 +220,14 @@ def dataframe(fig, df,
         yname = axis[col]
         yname, color = yname['axis'], yname['color']
         if scat:
+            print("plotting scatter")
             if yname == 'main':
                 scatter(fig, data.index, data.values, _bins, color=color, name=str(col))
             else:
                 scatter(fig, data.index, data.values, _bins, color=color,
                         name=str(col), y_range_name=yname)
         else:
+            print("plotting whisker")
             if yname == 'main':
                 whisker(fig, data.index, data.values, _bins, color=color,
                         name=str(col))
