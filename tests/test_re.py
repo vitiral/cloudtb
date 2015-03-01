@@ -44,6 +44,16 @@ class TestGroup(TestCase):
         self.assertEqual(matches[3].text, 'foo bar')
         self.assertEqual(matches[3].indexes, [3])
 
+    def test_or(self):
+        exp = r'(other)|(foo \d)|(foo 9)'
+        text = 'foo 9'
+        searched = re.search(exp, text)
+        group = Group(text, searched, groups(searched))
+        # Interestingly, re stops matching once something has been
+        # matched. This makes sense, as it will improve performance
+        self.assertEqual([0, 2], group.indexes)
+        self.assertEqual(2, group.index)
+
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'
         text = 'foo bar is grouped differently than foo bar'
@@ -64,6 +74,10 @@ class TestResearch(TestCase):
         self.assertEqual(searched[2], ' but without ')
         self.assertEqual(searched[3].text, 'foo there is no bar')
         self.assertEqual(searched[4], '?')
+
+        matches = searched.matches
+        self.assertEqual(2, len(matches))
+        self.assertEqual('foo is the opposite of bar', matches[0].text)
 
     def test_str(self):
         exp = '(foo).*(bar)'
