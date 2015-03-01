@@ -1,12 +1,9 @@
-
 from enum import Enum
 from copy import copy, deepcopy
-
 import unittest
-from unittest.mock import MagicMock
 
-from cloudtb.container import (AttrDict, SolidDict, TypedDict,
-                               TypedEnum, TypedList)
+from cloudtb.collections import (AttrDict, SolidDict, TypedDict,
+                                 TypedEnum, TypedList)
 
 mystr = 'abcdefg'
 mydict = dict(zip(mystr, range(len(mystr))))
