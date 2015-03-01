@@ -17,8 +17,9 @@ class research(tuple):
     the matched and unmatched sections of the text, respectively
 
     Properties:
-        matches -- only the matches in the text
-        repr(self) -- helpful formatted string showing matched text
+        matches -- only the matches of the search
+        repr(self) -- helpful formatted string showing matched text inside
+            of original text
     '''
     def __new__(cls, exp, text, start=0, end=None):
         return tuple.__new__(cls, _research(exp, text, start, end))
@@ -30,7 +31,7 @@ class research(tuple):
         return ''.join(str(n) for n in self)
 
 
-class Group:
+class Group(list):
     '''Regular expression object that better tracks information from what
     group it came from
 
@@ -51,7 +52,7 @@ class Group:
             sgroups = groups(searched)
         mytext = sgroups[index]
         indexes = [index]
-        matches = []
+        data = []
         myreg = searched.regs[index]
         mystart, myend = myreg
         # prev_end = 0 if index is 0 else searched.regs[index][1]
@@ -70,19 +71,23 @@ class Group:
             assert start >= mystart and end <= myend
             if prev_end < start:
                 # store raw text
-                matches.append(text[prev_end:start])
+                data.append(text[prev_end:start])
             if reg == myreg:
                 indexes.append(index)
                 index += 1
                 continue
-            matches.append(Group(text, searched, sgroups, index))
-            index += len(matches[-1].indexes)
+            data.append(Group(text, searched, sgroups, index))
+            index += len(data[-1].indexes)
             prev_end = searched.regs[index - 1][1]
 
         self.text = mytext
+        self.replaced = None
         self.reg = myreg
-        self.matches = matches
         self.indexes = indexes
+        self._mindexes = set(m.index for m in data if
+                             isinstance(m, Group))
+        self.matches = tuple(m for m in data if isinstance(m, Group))
+        list.__init__(self, data)
 
     @property
     def index(self):
@@ -98,10 +103,23 @@ class Group:
     def __repr__(self):
         start, end = '[', '#{}]'.format(self.index)
         if self.matches:
-            middle = ''.join(str(n) for n in self.matches)
+            middle = ''.join(str(n) for n in self)
         else:
             middle = self.text
         return start + middle + end
+
+    def sub(self, text, index=None):
+        if index is None or index == self.index:
+            self.replaced = text
+        elif index in self._mindexes:
+            for m in self.matches:
+                if index == m.index:
+                    m.sub(text, index)
+                    return
+            assert False
+        else:
+            raise ValueError("index {} not in Group. Indexes: {}".
+                             format(index, self.indexes))
 
 
 def _research(exp, text, start=0, end=None):

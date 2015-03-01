@@ -12,7 +12,7 @@ class TestGroup(TestCase):
         grps = groups(searched)
         self.assertEqual(grps, (text, 'foo', 'bar'))
         group = Group(text, searched, grps)
-        matches = group.matches
+        matches = group
         self.assertEqual(group.text, text)
         self.assertEqual(group.indexes, [0])
         self.assertEqual(matches[0].text, 'foo')
@@ -32,12 +32,12 @@ class TestGroup(TestCase):
         self.assertEqual(grps, (text, 'foo bar', 'bar', 'foo bar'))
         # import ipdb; ipdb.set_trace()
         group = Group(text, searched, grps)
-        matches = group.matches
+        matches = group
         self.assertEqual(matches[0].text, 'foo bar')
         self.assertEqual(matches[0].indexes, [1])
-        self.assertEqual(matches[0].matches[0], 'foo ')
-        self.assertEqual(matches[0].matches[1].text, 'bar')
-        self.assertEqual(matches[0].matches[1].indexes, [2])
+        self.assertEqual(matches[0][0], 'foo ')
+        self.assertEqual(matches[0][1].text, 'bar')
+        self.assertEqual(matches[0][1].indexes, [2])
         self.assertEqual(matches[1].text, 'bar')
         self.assertEqual(matches[1].indexes, [2])
         self.assertEqual(matches[2], ' is grouped differently than ')
@@ -53,6 +53,26 @@ class TestGroup(TestCase):
         # matched. This makes sense, as it will improve performance
         self.assertEqual([0, 2], group.indexes)
         self.assertEqual(2, group.index)
+
+    def test_sub(self):
+        exp = '(foo).*(bar)'
+        text = 'foo is the opposite of bar'
+        searched = re.search(exp, text)
+        group = Group(text, searched)
+        matches = group
+        group.sub('zaz', 1)
+        self.assertEqual('zaz', matches[0].replaced)
+
+    # def test_sub_embbedded(self):
+    #     exp = '(foo (bar)).*(foo bar)'
+    #     text = 'foo bar is grouped differently than foo bar'
+    #     searched = re.search(exp, text)
+    #     group = Group(text, searched)
+    #     matches = group
+    #     import ipdb; ipdb.set_trace()
+    #     group.sub('zaz', 2)
+    #     mt = matches[0]
+    #     self.assertEqual('zaz', matches[0][1].replaced)
 
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'
