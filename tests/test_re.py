@@ -63,16 +63,16 @@ class TestGroup(TestCase):
         group.sub('zaz', 1)
         self.assertEqual('zaz', matches[0].replaced)
 
-    # def test_sub_embbedded(self):
-    #     exp = '(foo (bar)).*(foo bar)'
-    #     text = 'foo bar is grouped differently than foo bar'
-    #     searched = re.search(exp, text)
-    #     group = Group(text, searched)
-    #     matches = group
-    #     import ipdb; ipdb.set_trace()
-    #     group.sub('zaz', 2)
-    #     mt = matches[0]
-    #     self.assertEqual('zaz', matches[0][1].replaced)
+    def test_sub_embbedded(self):
+        exp = '(foo (bar)).*(foo bar)'
+        text = 'foo bar is grouped differently than foo bar'
+        searched = re.search(exp, text)
+        group = Group(text, searched)
+        matches = group
+        import ipdb; ipdb.set_trace()
+        group.sub('zaz', 2)
+        mt = matches[0]
+        self.assertEqual('zaz', matches[0][1].replaced)
 
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'
