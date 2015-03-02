@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Extention functions for python's standard platform module
+Convenience functions for python's standard platform module
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>
 
 © Creative Commons 0

@@ -1,8 +1,16 @@
+#!/usr/bin/python3
+'''
+Useful collections objects
 
-from enum import Enum
+Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>
+
+© Creative Commons 0
+To the extent possible under law, the author(s) have dedicated all copyright
+and related and neighboring rights to this software to the public domain
+worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
+<http://creativecommons.org/publicdomain/zero/1.0/>
+'''
 from copy import deepcopy
-
-from .builtin import isiter
 
 
 class AttrDict(dict):
