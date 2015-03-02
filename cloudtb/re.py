@@ -20,6 +20,24 @@ class research(tuple):
         matches -- only the matches of the search
         repr(self) -- helpful formatted string showing matched text inside
             of original text
+
+    Example:
+        exp = '(foo).*?(bar)'
+        text = 'so foo is the opposite of bar but without foo there is no bar?'
+        searched = research(exp, text)
+        print(searched)
+        print(searched[0])
+        print(repr(searched.matches[0]))  # item access
+        print(repr(searched.matches[0][0])) # groups have item access too
+        searched.sub('zaz', 2)  # replace group 2 with 'zaz'
+        print(searched.str)
+    Output:
+        so [[foo#1] is the opposite of [bar#2]#0] but without [[foo#1] there
+        is no [bar#2]#0]?
+        'so '
+        '[[foo#1] is the opposite of [bar#2]#0]'
+        '[foo#1]'
+        'so foo is the opposite of zaz but without foo there is no zaz?'
     '''
     def __new__(cls, exp, text, start=0, end=None):
         return tuple.__new__(cls, cls._construct(exp, text, start, end))
@@ -79,16 +97,17 @@ class Group(list):
     group it came from
 
     Properties:
-        matches -- Group objects that are the matches in this Group
-            Example: "(bar)" is a match within "(foo (bar))"
+        __getitem__ -- items are stored in the order they are matched.
+            Raw text is stored as a str, Group objects and their children
+            are stored as Group
+        matches -- same as item access, except only the Group objects
         reg -- (start, stop) within the outside text. Same idea as
             re.search(*).regs
-        text -- the whole text of self and all matches
+        text -- the base text of the whole match
         repr(self) -- helpful formatted string showing self and all internal
             matches
         index -- the main group index
-        indexes -- all group indexes that match group
-            Example:
+        indexes -- all group indexes that match the group
     '''
     def __init__(self, text, searched, sgroups=None, index=0):
         if sgroups is None:
