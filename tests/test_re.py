@@ -69,8 +69,9 @@ class TestGroup(TestCase):
         matches = group
         group.sub('zaz', 2)
         self.assertEqual('zaz', matches[0][1].replaced)
-        expected = '[[foo [zaz#2]#1] is grouped differently than [foo bar#3]#0]'
-        self.assertEqual(expected, str(group))
+        # expected = '[[foo [zaz#2]#1] is grouped differently than [foo bar#3]#0]'
+        expected = 'foo zaz is grouped differently than foo bar'
+        self.assertEqual(expected, group.str)
 
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'

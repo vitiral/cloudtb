@@ -27,6 +27,16 @@ class research(tuple):
     def __init__(self, exp, text, start=0, end=None):
         self.matches = tuple(m for m in self if isinstance(m, Group))
 
+    def sub(self, text, index):
+        '''Substitute the text for the group index.
+        Remeber that the whole match object is group 0
+        '''
+        for m in self.matches:
+            try:
+                m.sub(text, index)
+            except ValueError:
+                pass
+
     @staticmethod
     def _construct(exp, text, start=0, end=None):
         if isinstance(exp, (str, bytes)):
@@ -122,6 +132,11 @@ class Group(list):
             indexes.extend(m._mindexes)
         self._mindexes = set(indexes)  # all self and child match indexes
         self._iconsumed = index - istart
+
+    @property
+    def str(self):
+        '''get the full text, including all replacements'''
+        return ''.join(n if isinstance(n, str) else n.str for n in self)
 
     def __repr__(self):
         start, end = '[', '#{}]'.format(self.index)
