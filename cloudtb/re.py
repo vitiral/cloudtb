@@ -1,5 +1,12 @@
 import re
 
+from .pprint import fcolors
+try:
+    from colors import cyan, red, magenta
+except ImportError:
+    cyan, red, magenta = None, None
+colors = dict(markup=cyan, match=magenta, replace=red)
+
 
 def groups(searched):
     '''returns groups as matched from searched.regs (re.search.groups doesn't)
@@ -54,6 +61,10 @@ class research(tuple):
                 m.sub(text, index)
             except ValueError:
                 pass
+
+    @property
+    def repr(self):
+        return ''.join(n if isinstance(n, str) else n.repr for n in self)
 
     @property
     def str(self):
@@ -156,6 +167,28 @@ class Group(list):
         self._mindexes = set(indexes)  # all self and child match indexes
         self._iconsumed = index - istart
 
+    def _repr(self, colorize=None):
+        col = colors
+        if colorize is False:
+            markup, match, replace = None, None, None
+        else:
+            markup, match, replace = col['markup'], col['match'], col['replace']
+        represent = [('[', markup)]
+        if self.matches and self.replaced is None:
+            for n in self:
+                if isinstance(n, str):
+                    represent.append((n, match))
+                else:
+                    represent.extend(n._repr())
+        else:
+            represent.append((self.text, match) if self.replaced is None else
+                             (self.replaced, replace))
+        represent.append(('#{}]'.format(self.index), markup))
+        return represent
+
+    def __repr__(self):
+        return fcolors(self._repr())
+
     @property
     def str(self):
         '''get the full text, including all replacements'''
@@ -164,13 +197,10 @@ class Group(list):
         else:
             return self.text if self.replaced is None else self.replaced
 
-    def __repr__(self):
-        start, end = '[', '#{}]'.format(self.index)
-        if self.matches:
-            middle = ''.join(str(n) for n in self)
-        else:
-            middle = self.text if self.replaced is None else self.replaced
-        return start + middle + end
+    @property
+    def repr(self):
+        '''Returns pure utf8 of repr (no colors)'''
+        return fcolors(self._repr(), color=False)
 
     def sub(self, text, index=None):
         if index is None or index in self.indexes:

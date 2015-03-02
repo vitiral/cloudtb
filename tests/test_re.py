@@ -78,7 +78,7 @@ class TestGroup(TestCase):
         searched = re.search(exp, text)
         group = Group(text, searched, groups(searched))
         expected = "[[foo [bar#2]#1] is grouped differently than [foo bar#3]#0]"
-        self.assertEqual(str(group), expected)
+        self.assertEqual(group.repr, expected)
 
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'
@@ -115,7 +115,7 @@ class TestResearch(TestCase):
         searched = research(exp, text)
         expected = ('so [[foo#1] is the opposite of [bar#2]#0] but without '
                     '[[foo#1] there is no [bar#2]#0]?')
-        self.assertEqual(str(searched), expected)
+        self.assertEqual(searched.repr, expected)
 
     def test_sub(self):
         exp = '(foo).*?(bar)'
