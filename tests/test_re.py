@@ -77,8 +77,7 @@ class TestGroup(TestCase):
         text = 'foo bar is grouped differently than foo bar'
         searched = re.search(exp, text)
         group = Group(text, searched, groups(searched))
-        expected = ("[[foo [bar#2]#1] is grouped "
-                    "differently than [foo bar#3]#0]")
+        expected = "[[foo [bar#2]#1] is grouped differently than [foo bar#3]#0]"
         self.assertEqual(str(group), expected)
 
 

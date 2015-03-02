@@ -22,10 +22,39 @@ class research(tuple):
             of original text
     '''
     def __new__(cls, exp, text, start=0, end=None):
-        return tuple.__new__(cls, _research(exp, text, start, end))
+        return tuple.__new__(cls, cls._construct(exp, text, start, end))
 
     def __init__(self, exp, text, start=0, end=None):
         self.matches = tuple(m for m in self if isinstance(m, Group))
+
+    @staticmethod
+    def _construct(exp, text, start=0, end=None):
+        if isinstance(exp, (str, bytes)):
+            exp = re.compile(exp)
+        end = len(text) if end is None else end
+        search = exp.search
+        pos = start
+        count = 0
+        # import ipdb; ipdb.set_trace()
+        while pos <= end:
+            searched = search(text, pos, end)
+            if searched is None:
+                break
+            count += 1
+            if count > end:
+                assert False
+            start, stop = searched.span()
+            # get the raw text (no match)
+            t = text[pos: start]
+            if t is not '':
+                yield t
+            if start == stop:  # empty match
+                pos += 1
+                continue
+
+            yield Group(text, searched)
+            pos = stop
+        yield text[pos:]
 
     def __repr__(self):
         return ''.join(str(n) for n in self)
@@ -116,30 +145,3 @@ class Group(list):
             raise ValueError("index {} not in Group. Indexes: {}".
                              format(index, self.indexes))
 
-def _research(exp, text, start=0, end=None):
-    if isinstance(exp, (str, bytes)):
-        exp = re.compile(exp)
-    end = len(text) if end is None else end
-    search = exp.search
-    pos = start
-    count = 0
-    # import ipdb; ipdb.set_trace()
-    while pos <= end:
-        searched = search(text, pos, end)
-        if searched is None:
-            break
-        count += 1
-        if count > end:
-            assert False
-        start, stop = searched.span()
-        # get the raw text (no match)
-        t = text[pos: start]
-        if t is not '':
-            yield t
-        if start == stop:  # empty match
-            pos += 1
-            continue
-
-        yield Group(text, searched)
-        pos = stop
-    yield text[pos:]
