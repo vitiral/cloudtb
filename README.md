@@ -17,6 +17,8 @@ as this could cause confusion with the actual pandas library
 
 
 ## Module Overview
+### builtin
+Tons of useful functions for a whole range of different applications. Everything from `isiter` to `throw` and `raises`
 
 ### re
 ```
