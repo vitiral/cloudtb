@@ -14,3 +14,16 @@ it is a bad idea to do:
 from cloudtb import pandas
 ```
 as this could cause confusion with the actual pandas library
+
+
+## Module Overview
+
+### re
+```
+text = 'so foo is the opposite of bar but without foo there is no bar?'
+exp = '(foo).*?(bar)'
+searched = cre.research(exp, text)
+print(searched)
+```
+
+![pprinted regular expression](ttp://i.stack.imgur.com/ksQUu.png)
