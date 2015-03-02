@@ -7,6 +7,9 @@ modules target distributions of scientific python and data analysis
 The cloudtb should be used something like:
 ```
 from cloudtb.pandas import dataframe_dict
+# or
+import cloudtb as tb
+tb.pandas  # ... do something
 ```
 
 it is a bad idea to do:
