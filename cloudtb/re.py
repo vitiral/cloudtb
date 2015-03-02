@@ -2,7 +2,7 @@ import re
 
 
 def groups(searched):
-    '''returns groups as matched from searched.regs
+    '''returns groups as matched from searched.regs (re.search.groups doesn't)
 
     Arguments:
         searched -- object from re.search
@@ -185,4 +185,3 @@ class Group(list):
         else:
             raise ValueError("index {} not in Group. Indexes: {}".
                              format(index, self.indexes))
-
