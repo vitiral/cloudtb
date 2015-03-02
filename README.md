@@ -25,5 +25,5 @@ exp = '(foo).*?(bar)'
 searched = cre.research(exp, text)
 print(searched)
 ```
+![re formatted](http://i.imgur.com/8baPoCY.png)
 
-![pprinted regular expression](ttp://i.stack.imgur.com/ksQUu.png)
