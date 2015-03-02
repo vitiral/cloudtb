@@ -14,12 +14,12 @@ class TestGroup(TestCase):
         group = Group(text, searched, grps)
         matches = group
         self.assertEqual(group.text, text)
-        self.assertEqual(group.indexes, [0])
+        self.assertEqual(group.indexes, {0})
         self.assertEqual(matches[0].text, 'foo')
-        self.assertEqual(matches[0].indexes, [1])
+        self.assertEqual(matches[0].indexes, {1})
         self.assertEqual(matches[1], ' is the opposite of ')
         self.assertEqual(matches[2].text, 'bar')
-        self.assertEqual(matches[2].indexes, [2])
+        self.assertEqual(matches[2].indexes, {2})
 
         self.assertEqual(matches[0].index, 1)
         self.assertEqual(matches[2].index, 2)
@@ -30,19 +30,17 @@ class TestGroup(TestCase):
         searched = re.search(exp, text)
         grps = groups(searched)
         self.assertEqual(grps, (text, 'foo bar', 'bar', 'foo bar'))
-        # import ipdb; ipdb.set_trace()
         group = Group(text, searched, grps)
         matches = group
         self.assertEqual(matches[0].text, 'foo bar')
-        self.assertEqual(matches[0].indexes, [1])
+        self.assertEqual(matches[0].indexes, {1})
         self.assertEqual(matches[0][0], 'foo ')
         self.assertEqual(matches[0][1].text, 'bar')
-        self.assertEqual(matches[0][1].indexes, [2])
-        self.assertEqual(matches[1].text, 'bar')
-        self.assertEqual(matches[1].indexes, [2])
-        self.assertEqual(matches[2], ' is grouped differently than ')
-        self.assertEqual(matches[3].text, 'foo bar')
-        self.assertEqual(matches[3].indexes, [3])
+        self.assertEqual(matches[0][1].indexes, {2})
+        self.assertIsInstance(matches[1], str)
+        self.assertEqual(matches[1], ' is grouped differently than ')
+        self.assertEqual(matches[2].text, 'foo bar')
+        self.assertEqual(matches[2].indexes, {3})
 
     def test_or(self):
         exp = r'(other)|(foo \d)|(foo 9)'
@@ -51,7 +49,7 @@ class TestGroup(TestCase):
         group = Group(text, searched, groups(searched))
         # Interestingly, re stops matching once something has been
         # matched. This makes sense, as it will improve performance
-        self.assertEqual([0, 2], group.indexes)
+        self.assertEqual({0, 2}, group.indexes)
         self.assertEqual(2, group.index)
 
     def test_sub(self):
@@ -63,23 +61,23 @@ class TestGroup(TestCase):
         group.sub('zaz', 1)
         self.assertEqual('zaz', matches[0].replaced)
 
-    def test_sub_embbedded(self):
+    def test_sub_embedded(self):
         exp = '(foo (bar)).*(foo bar)'
         text = 'foo bar is grouped differently than foo bar'
         searched = re.search(exp, text)
         group = Group(text, searched)
         matches = group
-        import ipdb; ipdb.set_trace()
         group.sub('zaz', 2)
-        mt = matches[0]
         self.assertEqual('zaz', matches[0][1].replaced)
+        expected = '[[foo [zaz#2]#1] is grouped differently than [foo bar#3]#0]'
+        self.assertEqual(expected, str(group))
 
     def test_str(self):
         exp = '(foo (bar)).*(foo bar)'
         text = 'foo bar is grouped differently than foo bar'
         searched = re.search(exp, text)
         group = Group(text, searched, groups(searched))
-        expected = ("[[foo [bar#2]#1][bar#2] is grouped "
+        expected = ("[[foo [bar#2]#1] is grouped "
                     "differently than [foo bar#3]#0]")
         self.assertEqual(str(group), expected)
 

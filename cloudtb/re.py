@@ -57,6 +57,7 @@ class Group(list):
         mystart, myend = myreg
         # prev_end = 0 if index is 0 else searched.regs[index][1]
         prev_end = mystart
+        istart = index
         index += 1
         while index < len(searched.regs):
             reg = searched.regs[index]
@@ -77,50 +78,43 @@ class Group(list):
                 index += 1
                 continue
             data.append(Group(text, searched, sgroups, index))
-            index += len(data[-1].indexes)
+            index += data[-1]._iconsumed
             prev_end = searched.regs[index - 1][1]
 
+        list.__init__(self, data)
         self.text = mytext
         self.replaced = None
         self.reg = myreg
-        self.indexes = indexes
-        self._mindexes = set(m.index for m in data if
-                             isinstance(m, Group))
+        self.index = (indexes[0] if (len(indexes) < 2 or indexes[0] is not 0)
+                      else indexes[1])
+        self.indexes = set(indexes)
         self.matches = tuple(m for m in data if isinstance(m, Group))
-        list.__init__(self, data)
-
-    @property
-    def index(self):
-        '''Simplified index number. Returns first index number if it is not
-        0, otherwise returns second index number (if it exists)
-        '''
-        ind = self.indexes[0]
-        if ind is 0 and len(self.indexes) > 1:
-            return self.indexes[1]
-        else:
-            return self.indexes[0]
+        for m in self.matches:
+            indexes.extend(m._mindexes)
+        self._mindexes = set(indexes)  # all self and child match indexes
+        self._iconsumed = index - istart
 
     def __repr__(self):
         start, end = '[', '#{}]'.format(self.index)
         if self.matches:
             middle = ''.join(str(n) for n in self)
         else:
-            middle = self.text
+            middle = self.text if self.replaced is None else self.replaced
         return start + middle + end
 
     def sub(self, text, index=None):
-        if index is None or index == self.index:
+        if index is None or index in self.indexes:
             self.replaced = text
         elif index in self._mindexes:
             for m in self.matches:
-                if index == m.index:
-                    m.sub(text, index)
-                    return
+                try:
+                    return m.sub(text, index)
+                except ValueError:
+                    pass
             assert False
         else:
             raise ValueError("index {} not in Group. Indexes: {}".
                              format(index, self.indexes))
-
 
 def _research(exp, text, start=0, end=None):
     if isinstance(exp, (str, bytes)):
