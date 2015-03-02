@@ -37,6 +37,10 @@ class research(tuple):
             except ValueError:
                 pass
 
+    @property
+    def str(self):
+        return ''.join(n if isinstance(n, str) else n.str for n in self)
+
     @staticmethod
     def _construct(exp, text, start=0, end=None):
         if isinstance(exp, (str, bytes)):
@@ -136,7 +140,10 @@ class Group(list):
     @property
     def str(self):
         '''get the full text, including all replacements'''
-        return ''.join(n if isinstance(n, str) else n.str for n in self)
+        if self.matches:
+            return ''.join(n if isinstance(n, str) else n.str for n in self)
+        else:
+            return self.text if self.replaced is None else self.replaced
 
     def __repr__(self):
         start, end = '[', '#{}]'.format(self.index)
