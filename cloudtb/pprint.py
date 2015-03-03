@@ -28,19 +28,19 @@ def pplist(l, cols=4, indent=0):
 def ppcolors(colorized, color=None):
     '''pprints out colorized string
 
-    Returns a string with the colors properly applied
-
     This function autodetects whether the terminal in use supports colors with
-    cloudtb.sys.hascolor.
-
-    If the terminal does not support colors, it prints out plain text
+    cloudtb.sys.hascolor. If the terminal does not support colors, it prints
+    out plain text
 
     Arguments:
         colorized -- list of (text, color_function) tuples
             color_function should be None (do nothing) or
-            a function that colorize the input text. It is recommended to use
+            a function that colorizes the input text. It is recommended to use
             the python package ansicolors.
-            i.e. `from colors import red, green, blue` then use those functions
+            Example:
+                from colors import red, green, blue
+                ppcolors([ ('red', red), (' green ', green), ('blue', blue) ])
+            Will print out "red green blue" in their respective colors
         color -- if None, do default (use detection), if False never print
             colors, if True always print colors
     '''
