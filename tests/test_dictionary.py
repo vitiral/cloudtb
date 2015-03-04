@@ -1,4 +1,8 @@
 from unittest import TestCase
+from copy import deepcopy
+
+import numpy as np
+
 from cloudtb import dictionary
 
 names = 'abcdef'
@@ -27,21 +31,46 @@ class TestGetItem(TestCase):
         self.assertEqual(dictionary.getitem(basic_dict, ('self', 'b')), 1)
 
 
-class TestUnpack(TestCase):
+class TestPack(TestCase):
     def test_basic(self):
         diclist = [basic_dict for _ in range(10)]
-        checkdict = {key: list((i,) * 10) for
-                     i, key in enumerate(names)}
-        checkdict['self'] = dict(checkdict)
-        unpacked = dictionary.unpack(diclist)
-        self.assertDictEqual(unpacked, checkdict)
+        expected = {key: list((i,) * 10) for
+                    i, key in enumerate(names)}
+        expected['self'] = dict(expected)
+        result = dictionary.pack(diclist)
+        self.assertDictEqual(result, expected)
+
+    def test_numpy(self):
+        diclist = [basic_dict for _ in range(10)]
+        expected = {key: np.array(list((i,) * 10)) for
+                    i, key in enumerate(names)}
+        expected['self'] = dict(expected)
+        result = dictionary.pack(diclist, dtype=int)
+        np.testing.assert_equal(result, expected)
+
+    def test_embedded_types(self):
+        dtype = {key: int for key in basic_dict}
+        dtype['a'] = float
+        dtype['self'] = dict(dtype)
+
+        base = deepcopy(basic_dict)
+        base['a'] = 5.5
+        base['self']['a'] = 5.5
+        diclist = [base for _ in range(10)]
+        result = dictionary.pack(diclist, header=diclist[0], dtype=dtype)
+
+        expected = {key: np.array(list((i,) * 10), dtype=int) for
+                    i, key in enumerate(names)}
+        expected['a'] = np.array(list((5.5,) * 10), dtype=float)
+        expected['self'] = dict(expected)
+
+        np.testing.assert_equal(result, expected)
 
 
 class TestFlatten(TestCase):
     def test_basic(self):
         keys = [(n,) for n in names]
         keys.extend(('self', n) for n in names)
-        # import ipdb; ipdb.set_trace()
         flat = dictionary.flatten(basic_dict)
         self.assertEqual(set(keys), set(flat.keys()))
 
@@ -50,7 +79,6 @@ class TestFill(TestCase):
     def test_basic(self):
         keys = [(n, None) for n in names]
         keys.extend(('self', n) for n in names)
-        # import ipdb; ipdb.set_trace()
         flat = dictionary.flatten(basic_dict)
         filled = dictionary.fill_keys(flat)
         self.assertEqual(set(keys), set(filled))

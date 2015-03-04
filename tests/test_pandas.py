@@ -1,7 +1,7 @@
 from unittest import TestCase
 from pandas.util.testing import assert_frame_equal
 from cloudtb.pandas import dataframe_dict
-from cloudtb.dictionary import get_header, unpack, flatten, fill_keys
+from cloudtb.dictionary import get_header, pack, flatten, fill_keys
 
 strings = 'abcdefg'
 testdata = {key: value for (key, value) in zip(strings, range(len(strings)))}
@@ -16,7 +16,7 @@ class TestLoad(TestCase):
 
     def test_dict(self):
         header = get_header(testdata[0])
-        custom_data = fill_keys(flatten(unpack(testdata, header)), '')
+        custom_data = fill_keys(flatten(pack(testdata, header)), '')
         result = dataframe_dict(testdata)
         expected = dataframe_dict(custom_data)
         assert_frame_equal(result, expected, check_names=True)

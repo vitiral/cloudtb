@@ -10,7 +10,7 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
 import pandas as pd
-from cloudtb.dictionary import get_header, unpack, flatten, fill_keys, depth
+from cloudtb.dictionary import get_header, pack, flatten, fill_keys, depth
 from . import builtin
 
 
@@ -25,7 +25,7 @@ def _dataframe_dict(data, index=None, filler='', header=None):
         header = resolve_header(header)
         if header is None:
             header = get_header(data[0])
-        data = unpack(data, header)
+        data = pack(data, header)
     data = flatten(data)
     data = fill_keys(data, filler)
     return data

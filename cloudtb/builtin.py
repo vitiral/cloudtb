@@ -14,6 +14,8 @@ import imp
 import itertools
 import collections
 
+nan = float('nan')
+
 
 def importpath(name, path):
     module = imp.find_module(path)
@@ -94,6 +96,14 @@ def consume(iterator, n=None):
 def throw(exception):
     '''Raises an exception. Can be used inside compressions'''
     raise exception
+
+
+def catch(exception, default, function, *args, **kwargs):
+    '''Call a function. On exception, return default'''
+    try:
+        return function(*args, **kwargs)
+    except exception:
+        return default
 
 
 def raises(exception, function, *args, **kwargs):

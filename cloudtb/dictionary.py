@@ -9,9 +9,11 @@ and related and neighboring rights to this software to the public domain
 worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
-
+from copy import deepcopy
 import itertools
 
+try: import numpy as np
+except ImportError: pass
 from cloudtb import builtin
 
 
@@ -48,6 +50,13 @@ def getitem(dic, item):
     return dic
 
 
+def popitem(dic, item):
+    '''Dictionary item pop with tuples'''
+    for i in itertools.islice(item, 0, len(item) - 1):
+        dic = dic[i]
+    return dic.pop(item[-1])
+
+
 def setitem(dic, item, value):
     '''Dictionary item setting with tuples'''
     for i, k in enumerate(item):
@@ -63,17 +72,57 @@ def setitem(dic, item, value):
     return dic
 
 
-def unpack(data, header=None):
-    '''Unpacks a list of dictionaries into a dictionary of lists
-    according to the header'''
-    if header is None:
-        header = get_header(data[0])
-    out = type(data[0])()
-    for key in header:
-        setitem(out, key, [])
-    for d in data:
-        for h in header:
-            getitem(out, h).append(getitem(d, h))
+def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
+    '''Pack a list of dictionaries into a dictionary of lists
+
+    Arguments:
+        data -- list of dictionaries. Dictionaries can be nested
+        default -- default value for missing data
+        header -- either a dictionary or a list of tuples that represents
+            the data format. If not given, data[0] is used.
+        dtype -- this function can also output data as a dict of np.arrays
+            dtype has several possible values:
+                list:           (default) output as python lists
+                numpy dtype:    all values have same numpy dtype
+                dict of types:  must match header, select the dtype of each item
+        verify -- if True, ValueError will be raised if data is wrong type.
+            If False, default will be used instead
+            Ignored for dtype==list
+    '''
+    if header is None and isinstance(dtype, dict):
+        raise ValueError("Must include header for non list dtypes")
+    header = get_header(data[0])
+    out = type(data[0])()  # preserve special types, like OrderedDicts
+
+    # Construct format of output dictionary
+    if dtype == list:
+        for key in header:
+            setitem(out, key, list(itertools.repeat(default, len(data))))
+    elif not isinstance(dtype, dict):
+        for key in header:
+            setitem(out, key, np.zeros(len(data), dtype=dtype))
+    else:
+        for key in header:
+            dt = getitem(dtype, key)
+            if dt in {str, bytes}:
+                setitem(out, key, list(itertools.repeat(dt(), len(data))))
+            else:
+                setitem(out, key, np.zeros(len(data), dtype=dt))
+
+    # store values
+    if verify:
+        for n, record in enumerate(data):
+            for index in header:
+                v = builtin.catch(KeyError, default, getitem, record, index)
+                item = getitem(out, index)
+                try: item[n] = v
+                except ValueError: item[n] = default
+    else:
+        for n, record in enumerate(data):
+            for index in header:
+                v = builtin.catch(KeyError, default, getitem, record, index)
+                item = getitem(out, index)
+                item[n] = v
     return out
 
 
