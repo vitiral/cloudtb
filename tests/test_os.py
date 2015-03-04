@@ -28,3 +28,10 @@ class TestSplit(TestCase):
         folders = os.path.sep.join(expected)
         result = split(folders)
         self.assertEqual(expected, result)
+
+    def test_root_more(self):
+        expected = ['', 'foo', 'bar', 'zaz']
+        folders = os.path.sep.join(expected)
+        expected[0] = os.path.sep  # if it was originally, would start with '//'
+        result = split(folders)
+        self.assertEqual(expected, result)
