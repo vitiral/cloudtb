@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 
 from cloudtb import dictionary
+from cloudtb.builtin import nan
 
 names = 'abcdef'
 basic_dict = dict(zip(names, range(len(names))))
@@ -64,6 +65,21 @@ class TestPack(TestCase):
         expected['a'] = np.array(list((5.5,) * 10), dtype=float)
         expected['self'] = dict(expected)
 
+        np.testing.assert_equal(result, expected)
+
+    def test_missing(self):
+        diclist = [deepcopy(basic_dict) for _ in range(10)]
+        diclist[5]['a'] = nan
+        result = dictionary.pack(diclist)
+
+        expected = {key: list((i,) * 10) for
+                    i, key in enumerate(names)}
+        expected['self'] = deepcopy(expected)
+        expected['a'][5] = nan
+        np.testing.assert_equal(result, expected)
+        del diclist[5]['b']
+        expected['b'][5] = nan
+        result = dictionary.pack(diclist)
         np.testing.assert_equal(result, expected)
 
 
