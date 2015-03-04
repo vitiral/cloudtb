@@ -54,7 +54,8 @@ def scatter(fig, x, y, bins, color='blue', name=None, **kwargs):
 
 
 def get_axis(fig, df):
-    '''Tries to assign sets of axis to the data. Returns dictionary with column + axis to use'''
+    '''Tries to assign sets of axis to the data.
+    Returns dictionary with column + axis to use'''
     dlen = len(df.columns)
     des = df.describe()
     total_max = np.max(des.loc['max'])
