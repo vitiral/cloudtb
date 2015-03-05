@@ -9,6 +9,8 @@ and related and neighboring rights to this software to the public domain
 worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from cloudtb.sys import hascolor
 

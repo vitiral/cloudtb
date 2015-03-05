@@ -10,7 +10,11 @@ and related and neighboring rights to this software to the public domain
 worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+import sys
 from copy import deepcopy
+from six import reraise, iteritems, iterkeys
 
 
 class AttrDict(dict):
@@ -32,7 +36,7 @@ class AttrDict(dict):
         dict.__init__(self, *args, **kwargs)
         # Make all internal dictionaries be own type. Make sure this
         # Overrides any super class's settings
-        for key, value in self.items():
+        for key, value in iteritems(self):
             if type(value) == dict:
                 dict.__setitem__(self, key, self.__class__(value))
 
@@ -44,7 +48,7 @@ class AttrDict(dict):
         they are updated and preserves pointers
         '''
         if isinstance(value, dict):
-            value = value.items()
+            value = iteritems(value)
         if drop_unknown:
             newv = {}
             for key, value in value:
@@ -53,7 +57,7 @@ class AttrDict(dict):
                 else:
                     if drop_logger is not None:
                         drop_logger(key)
-            value = newv.items()
+            value = iteritems(newv)
         for key, value in value:
             if hasattr(self[key], 'update'):
                 try:
@@ -158,7 +162,8 @@ class AttrDict(dict):
         try:
             return self.__getattribute__(key, keyonly=True)
         except AttributeError as exc:
-            raise KeyError from exc
+            exc = sys.exc_info()[1:]
+            reraise(KeyError, *exc)
 
     def __copy__(self, *args, **kwargs):
         # necessary because of recursive errors
@@ -167,14 +172,14 @@ class AttrDict(dict):
     def __deepcopy__(self, *args, **kwargs):
         # necessary because of recursive errors
         return self.__class__({key: deepcopy(value) for (key, value)
-                               in self.items()})
+                               in iteritems(self)})
 
     def __basic__(self):
         '''returns self in only basic python types.
 
         *Should* be used for libraries like json'''
         out = {}
-        for key in self:
+        for key in iterkeys(self):
             value = dict.__getitem__(self, key)
             if hasattr(value, '__basic__'):
                 value = value.__basic__()
@@ -206,9 +211,10 @@ class TypedDict(AttrDict):
     Keyword arguments:
         convert -- whether to attempt to convert values that don't match
     '''
-    def __init__(self, *args, convert=True, **kwargs):
+    def __init__(self, *args, **kwargs):
+        convert = kwargs.get('convert', True)
         object.__setattr__(self, '_convert', convert)
-        super().__init__(*args, **kwargs)
+        AttrDict.__init__(self, *args, **kwargs)
 
     def _convert_value(self, value, curval):
         '''Convert value to type(curvalue). Also do associated error checking'''
@@ -243,19 +249,22 @@ class TypedDict(AttrDict):
 
 class TypedList(list):
     '''A list that preserves types
-        type: the type of list elements to preserve
-        convert: whether to attempt automatic conversion to type
-        noset: don't allow setting of existing elements
+
+    Arguments:
+        type -- the type of list elements to preserve
+
+    Key Word Arguments:
+        convert -- whether to attempt automatic conversion to type
+        noset -- don't allow setting of existing elements
     '''
-    def __init__(self, type, *args, convert=True, noset=False,
-                 drop_unknown=False, drop_logger=None, **kwargs):
+    def __init__(self, type, *args, **kwargs):
         self._type = type
-        self._convert = convert
-        self._noset = noset
+        self._convert = kwargs.get('convert', True)
+        self._noset = kwargs.get('noset', False)
         list.__init__(self)  # make self an empty list
-        convert = self._convert
-        self.extend(tuple(*args, **kwargs), drop_unknown=drop_unknown,
-                    drop_logger=drop_logger)
+        self.extend(tuple(*args, **kwargs),
+                    drop_unknown=kwargs.get('drop_unknown', False),
+                    drop_logger=kwargs.get('drop_logger', None))
 
     def __basic__(self):
         '''returns self in only basic python types.'''
@@ -308,7 +317,7 @@ class TypedList(list):
         raise TypeError("Typed List is a protected member")
 
 
-class TypedEnum:
+class TypedEnum(object):
     '''Class to make setting of enum types valid and error checked
 
     This class can be put in a Typed object. It allows you to reduce
@@ -363,5 +372,3 @@ class TypedEnum:
         if hasattr(value, '__get__'):
             value = value.__get__(None, None)
         self.value = value
-
-

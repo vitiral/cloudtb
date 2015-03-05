@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 Useful tools for working with the python library pandas
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>
@@ -9,6 +9,8 @@ and related and neighboring rights to this software to the public domain
 worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import pandas as pd
 from cloudtb.dictionary import get_header, pack, flatten, fill_keys, depth
 from . import builtin

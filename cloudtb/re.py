@@ -9,13 +9,15 @@ and related and neighboring rights to this software to the public domain
 worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 <http://creativecommons.org/publicdomain/zero/1.0/>
 '''
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import re
 
 from .pprint import fcolors
 try:
     from colors import cyan, red, magenta
 except ImportError:
-    cyan, red, magenta = None, None
+    cyan, red, magenta = None, None, None
 colors = dict(markup=cyan, match=magenta, replace=red)
 
 
