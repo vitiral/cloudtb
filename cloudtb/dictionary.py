@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 Useful tools to inspect and work with dictionaries
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 additional pprint functions, like printing a list
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>

@@ -1,5 +1,4 @@
-
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 General plotting tools like finding the average of bins of data
 

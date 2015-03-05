@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 Functions to help with data analysis with the bokeh library
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>

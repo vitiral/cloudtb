@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 Debug On Exception library. Import this to automatically go into the debugger
 when there is a fatal exception. Can also be called by:

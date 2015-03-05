@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 add `research` object to have more interactive searches
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>

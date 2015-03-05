@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 Convenience functions for python's standard platform module
 Written in 2015 by Garrett Berg <garrett@cloudformdesign.com>
