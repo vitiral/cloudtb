@@ -12,9 +12,14 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 '''
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+import sys
 import imp
 import itertools
 import collections
+if sys.version_info.major < 3:
+    zip = itertools.izip
+else:
+    zip = zip
 
 nan = float('nan')
 

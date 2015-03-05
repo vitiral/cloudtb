@@ -17,6 +17,8 @@ import itertools
 try: import numpy as np
 except ImportError: pass
 from cloudtb import builtin
+from cloudtb.builtin import zip
+from six import iteritems, iterkeys, itervalues
 
 
 def depth(d, deep=0, isiter=False):
@@ -25,7 +27,7 @@ def depth(d, deep=0, isiter=False):
         builtin.throw(TypeError) if isiter and \
             not builtin.isiter(d) else None
         return deep
-    return max(depth(v, deep + 1, isiter) for k, v in d.items())
+    return max(depth(v, deep + 1, isiter) for k, v in iteritems(d))
 
 
 def get_header(item, extra_levels=None, filler=''):
@@ -36,7 +38,7 @@ def get_header(item, extra_levels=None, filler=''):
     if levels is None:
         levels = depth(item)
     keys = []
-    for key, value in item.items():
+    for key, value in iteritems(item):
         if isinstance(value, dict):
             keys.extend((key,) + v for v in
                         get_header(value, levels - 1, filler))
@@ -131,7 +133,7 @@ def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
 def flatten(data, start=()):
     '''Flattens a dictionary so that the keys are all tuples of keys'''
     flat = type(data)()
-    for key, value in data.items():
+    for key, value in iteritems(data):
         if isinstance(value, dict):
             flat.update(flatten(value, start=start + (key,)))
         else:
