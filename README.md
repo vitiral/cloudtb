@@ -1,8 +1,14 @@
 # Cloud Toolbox (cloudtb)
 
-This library contains various convinience functions that can be used for common problems in python.
-Each library is named according to the library/function they are targeting. Most of these
-modules target distributions of scientific python and data analysis
+This library contains various convinience functions that can be used for 
+common problems in python.  The unit tests work in both python 2 and 3
+and continued support is intended
+
+**For bugs and other issues** see the [github page]
+(https://github.com/cloudformdesign/cloudtb)
+
+Each library is named according to the library/function they are targeting. 
+Most of these modules target distributions of scientific python and data analysis
 
 The cloudtb should be used something like:
 ```
@@ -21,10 +27,12 @@ as this could cause confusion with the actual pandas library
 
 ## Module Overview
 ### builtin
-Tons of useful functions for a whole range of different applications. Everything from `isiter` to `throw` and `raises`
+Tons of useful functions for a whole range of different applications. 
+Everything from `isiter` to `throw` and `raises`
 
 ### re
-Helpful library for working with regular expressions. Especially useful for experiementation and repeated searching.
+Helpful library for working with regular expressions. Especially useful for 
+experiementation and repeated searching.
 ```
 text = 'so foo is the opposite of bar but without foo there is no bar?'
 exp = '(foo).*?(bar)'
