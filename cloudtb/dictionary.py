@@ -11,14 +11,13 @@ worldwide. THIS SOFTWARE IS DISTRIBUTED WITHOUT ANY WARRANTY.
 '''
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from copy import deepcopy
 import itertools
 
 try: import numpy as np
 except ImportError: pass
 from cloudtb import builtin
 from cloudtb.builtin import zip
-from six import iteritems, iterkeys, itervalues
+from six import iteritems
 
 
 def depth(d, deep=0, isiter=False):
