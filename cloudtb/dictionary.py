@@ -78,19 +78,29 @@ def setitem(dic, item, value):
 def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
     '''Pack a list of dictionaries into a dictionary of lists
 
-    Arguments:
-        data -- list of dictionaries. Dictionaries can be nested
-        default -- default value for missing data
-        header -- either a dictionary or a list of tuples that represents
-            the data format. If not given, data[0] is used.
-        dtype -- this function can also output data as a dict of np.arrays
+    Args:
+        data (dict): list of dictionaries. Dictionaries can be nested
+        default (optional): default value for missing data. Defaults to
+            float('nan')
+        header (dict or list, optional): either a dictionary or a list of
+            tuples that represents the data format. Defaults to data[0]
+        dtype (optional): default is list
             dtype has several possible values:
                 list:           (default) output as python lists
                 numpy dtype:    all values have same numpy dtype
                 dict of types:  must match header, select the dtype of each item
-        verify -- if True, ValueError will be raised if data is wrong type.
-            If False, default will be used instead
-            Ignored for dtype==list
+            When dtype is not list, numpy arrays will be outputed instead of
+            lists for all values except for str and bytes types
+        verify (bool, optional): if True, ValueError will be raised if data
+            is wrong type. If False, default will be used instead. Defaults to
+            False
+
+            Notes:
+                Ignored for dtype==list
+
+    Returns:
+        dict: a dictionary of the packed lists / arrays
+            Missing values will == default
     '''
     if header is None and isinstance(dtype, dict):
         raise ValueError("Must include header for non list dtypes")
