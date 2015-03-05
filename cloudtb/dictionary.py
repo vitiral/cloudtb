@@ -95,38 +95,38 @@ def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
     if header is None and isinstance(dtype, dict):
         raise ValueError("Must include header for non list dtypes")
     header = get_header(data[0])
-    out = type(data[0])()  # preserve special types, like OrderedDicts
+    packed = type(data[0])()  # preserve special types, like OrderedDicts
 
     # Construct format of output dictionary
-    if dtype == list:
+    if dtype == list or isinstance(dtype, (str, bytes)):
         for key in header:
-            setitem(out, key, list(itertools.repeat(default, len(data))))
+            setitem(packed, key, list(itertools.repeat(default, len(data))))
     elif not isinstance(dtype, dict):
         for key in header:
-            setitem(out, key, np.zeros(len(data), dtype=dtype))
+            setitem(packed, key, np.empty(len(data), dtype=dtype))
     else:
         for key in header:
             dt = getitem(dtype, key)
             if dt in {str, bytes}:
-                setitem(out, key, list(itertools.repeat(dt(), len(data))))
+                setitem(packed, key, list(itertools.repeat(dt(), len(data))))
             else:
-                setitem(out, key, np.zeros(len(data), dtype=dt))
+                setitem(packed, key, np.empty(len(data), dtype=dt))
 
     # store values
     if verify:
         for n, record in enumerate(data):
             for index in header:
                 v = builtin.catch(KeyError, default, getitem, record, index)
-                item = getitem(out, index)
+                item = getitem(packed, index)
                 try: item[n] = v
                 except ValueError: item[n] = default
     else:
         for n, record in enumerate(data):
             for index in header:
                 v = builtin.catch(KeyError, default, getitem, record, index)
-                item = getitem(out, index)
+                item = getitem(packed, index)
                 item[n] = v
-    return out
+    return packed
 
 
 def flatten(data, start=()):
