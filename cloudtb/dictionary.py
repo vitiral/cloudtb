@@ -101,6 +101,9 @@ def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
     Returns:
         dict: a dictionary of the packed lists / arrays
             Missing values will == default
+
+    >>> print('hi')
+    hi
     '''
     if header is None and isinstance(dtype, dict):
         raise ValueError("Must include header for non list dtypes")

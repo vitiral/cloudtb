@@ -18,7 +18,16 @@ from six import reraise, iteritems, iterkeys
 
 
 class AttrDict(dict):
-    '''Dictionary that allows item access via getattr
+    '''Attribute Access Dictionary
+
+    Example:
+        >>> adict = AttrDict(a=2, b=3)
+        >>> adict.a
+        2
+        >>> adict.c = "hi"
+        >>> adict['c']
+        'hi'
+
     It also does some fun stuff with descriptors to allow objects in
     it's dictionary to use descriptors (you can define the
     __get__ and __set__ methods of items and they will be used)
@@ -208,8 +217,21 @@ class TypedDict(AttrDict):
     '''Dictionary like object that keeps track of types. Choose whether
     to attempt to convert types (default) or not allow different types.
 
+    Example:
+        >>> tdict = TypedDict(a=2, b=3, c='hello')
+        >>> tdict.a
+        2
+        >>> tdict.a = 5.3  # when convert is True
+        >>> tdict.a
+        5
+        >>> tdict.a = "hi"
+        Traceback (most recent call last):
+        ...
+        ValueError: invalid literal for int() with base 10: 'hi'
+
     Keyword arguments:
-        convert -- whether to attempt to convert values that don't match
+        convert (bool, optional): whether to attempt to convert values that
+            don't match. Default is True
     '''
     def __init__(self, *args, **kwargs):
         convert = kwargs.get('convert', True)
@@ -324,13 +346,29 @@ class TypedEnum(object):
     the values that an attribute can be set to to only the values that
     are in the enum. Other values will have ValueError raised on them
 
-    When setting, TypedEnum will first look in the enum itself, it will
-    then look in the enum names, and finally it will look in the enum values.
-    So if you have overlap, it will choose the name
+    Examples:
+        >>> from cloudtb import enum
+        >>> myenum = enum(dict(a=1, b=2))
+        >>> e = TypedEnum(myenum)
+        >>> e.value = 'a'  # initialize value
+        >>> tdict = TypedDict(c=2, b=3, e=e)
+        >>> tdict.e
+        'a'
+        >>> tdict.e = 2  # same as ='b' or =enum.b
+        >>> tdict.e
+        'b'
+        >>> tdict.e = 5
+        Traceback (most recent call last):
+        ...
+        ValueError: Value does not exist in enum: 5
 
-    When getting, TypedEnun always returns the associated Enum's name
+    Setting:
+        TypedEnum will first look in the enum itself (i.e. myenum.a), it will
+        then look in the enum names (i.e. 'a', 'b', etc), and finally it will
+        look in the enum values (i.e. 1, 2)
 
-    See the unit tests for more examples
+    Returns:
+        Always returns the associated Enum's name
     '''
     def __init__(self, enum, default=None):
         self._enum = enum
