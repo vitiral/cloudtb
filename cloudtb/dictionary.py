@@ -16,8 +16,8 @@ import itertools
 try: import numpy as np
 except ImportError: pass
 from cloudtb import builtin
-from cloudtb.builtin import zip
 from six import iteritems
+from six.moves import zip
 
 
 def depth(d, deep=0, isiter=False):
@@ -31,6 +31,7 @@ def depth(d, deep=0, isiter=False):
 
 def get_header(item, extra_levels=None, filler=''):
     '''Returns the header of a nested dictionary
+
     The header is a list of tuples detailing the structure of the dictionary
     Very useful in pandas'''
     levels = extra_levels
@@ -102,8 +103,10 @@ def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
         dict: a dictionary of the packed lists / arrays
             Missing values will == default
 
-    >>> print('hi')
-    hi
+    'Examples:
+        >>> data = [{'a': 1, 'b': 2}, {'a': 2, 'b': 20}]
+        >>> sorted(pack(data).items())
+        [('a', [1, 2]), ('b', [2, 20])]
     '''
     if header is None and isinstance(dtype, dict):
         raise ValueError("Must include header for non list dtypes")
@@ -143,7 +146,20 @@ def pack(data, default=builtin.nan, header=None, dtype=list, verify=False):
 
 
 def flatten(data, start=()):
-    '''Flattens a dictionary so that the keys are all tuples of keys'''
+    '''Flattens a dictionary so that the keys are all tuples of keys
+
+    Args:
+        start (tuple, optional): keys to begin all keys with. For example,
+            if you wanted all keys to start with 'a' then start=('a',)
+    Example:
+        >>> data = {'a': 2, 'b': {'c': 3, 'f': 4}}
+        >>> flat = flatten(data)
+        >>> sorted(flat.keys())
+        [('a',), ('b', 'c'), ('b', 'f')]
+        >>> sorted(flat.values())
+        [2, 3, 4]
+
+    '''
     flat = type(data)()
     for key, value in iteritems(data):
         if isinstance(value, dict):

@@ -16,10 +16,7 @@ import sys
 import imp
 import itertools
 import collections
-if sys.version_info.major < 3:
-    zip = itertools.izip
-else:
-    zip = zip
+from six.moves import zip
 
 nan = float('nan')
 
