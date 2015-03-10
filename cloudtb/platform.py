@@ -40,12 +40,17 @@ def processor():
         all_info = subprocess.check_output(command, shell=True).strip().decode()
         for line in all_info.split("\n"):
             if "model name" in line:
-                out = re.sub(".*model name.*:", "", line, 1)
-
+                out = re.sub(".*model name.*:", "", line, 1).strip()
+                break
     if out is None:
         return _platform.processor()
     else:
         return out
+
+
+def architecture():
+    '''Return the CPU archetecture (32 or 64 bits)'''
+    return int(ctypes.sizeof(ctypes.c_voidp) * 8)
 
 
 def platform():
@@ -56,7 +61,7 @@ def platform():
         key: getattr(_platform, "python_" + key)() for key in
         ('implementation', 'compiler', 'version', 'version_tuple')
     }
-    out['python']['architecture'] = int(ctypes.sizeof(ctypes.c_voidp) * 8)
+    out['python']['architecture'] = architecture()
     out['processor'] = processor()
     out['cores'] = len(psutil.cpu_percent(percpu=True))
     return out
