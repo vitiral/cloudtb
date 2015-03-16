@@ -22,9 +22,12 @@ except ImportError:
     import pdb
 
 
+previous_except_hook = None
+
+
 def except_hook(exctype, value, traceback):
-    # if previous_except_hook:
-    #     previous_except_hook(exctype, value, traceback)
+    if previous_except_hook:
+        previous_except_hook(exctype, value, traceback)
     pdb.post_mortem(traceback)
 
 _usage = ('call a script with this to enter debugger automatically on fatal'
@@ -60,13 +63,17 @@ def main():
         statement = "exec(compile(%r, %r, 'exec'))" % \
                     (fp.read(), mainfile)
 
+    exc = None
     try:
         exec(compile(statement, "<string>", "exec"))
     except BdbQuit:
         pass
     except Exception as e:
-        pdb.post_mortem(e.__traceback__)
-        sys.exit(1)
+        exc = e
+    finally:
+        if exc:
+            pdb.post_mortem(exc.__traceback__)
+            sys.exit(1)
 
 
 if __name__ == '__main__':
@@ -74,4 +81,3 @@ if __name__ == '__main__':
 else:
     previous_except_hook = sys.excepthook
     sys.excepthook = except_hook
-
