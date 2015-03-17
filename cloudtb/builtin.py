@@ -14,11 +14,15 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
 import imp
+import math
 import itertools
 import collections
 from six.moves import zip
 
+# Some standard functions and objects that should be builtin
 nan = float('nan')
+isnan = math.isnan
+sizeof = sys.getsizeof
 
 try:
     from enum import Enum
