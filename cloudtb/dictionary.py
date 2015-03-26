@@ -199,3 +199,5 @@ def remove(obj, keys, check=True):
         builtin.consume(map(obj.pop, keys))
     else:
         builtin.consume(map(obj.pop, keys, itertools.repeat(None)))
+
+unpack = pack
