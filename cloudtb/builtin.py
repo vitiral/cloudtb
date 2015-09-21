@@ -81,6 +81,21 @@ def isiter(obj, exclude=(str, bytes, bytearray)):
             else False)
 
 
+def remove_duplicates(data, sort=True):
+    ''' Remove duplicates from the data (normally a list).
+        The data must be sortable and have an equality operator
+    '''
+    if not data:
+        return data
+    if sort:
+        data = sorted(data)
+    out = [data[0]]
+    for i, n in enumerate(data[1:]):
+        if data[i] != n:
+            out.append(n)
+    return out
+
+
 def encode(data, encoding="utf-8", errors="strict"):
     '''Always outputs bytes if possible'''
     if isinstance(data, (bytes, bytearray)):

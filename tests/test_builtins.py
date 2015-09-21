@@ -25,7 +25,10 @@ class TestIsIter(TestCase):
 
 class TestEnum(TestCase):
     def test_create(self):
-        from enum import Enum
+        try:
+            from enum import Enum
+        except ImportError:
+            return
         class abc(Enum):
             a = 0
             b = 1
@@ -36,3 +39,12 @@ class TestEnum(TestCase):
             return {i.name: i.value for i in e}
 
         self.assertEqual(todict(abc), todict(myabc))
+
+
+class TestDuplicates(TestCase):
+    def test_baisc(self):
+        data = [1, 1, 5, 2, 6, 6, 8, 1, 5]
+        expected = [1, 2, 5, 6, 8]
+        result = builtin.remove_duplicates(data)
+        assert result == expected
+
